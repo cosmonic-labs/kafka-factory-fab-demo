@@ -1,0 +1,87 @@
+# Builds every workload for wasm32-wasip2 and runs the two wasm-tools checks
+# the cosmonic-kafka skill prescribes, lints the scripts, and tests the topic
+# contract against a Redpanda service container. Nothing here runs Cosmonic
+# Desktop: there is no headless daemon in CI today (README).
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  workloads:
+    name: build ${{ matrix.workload }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workload:
+          - factory-simulator
+          - line-dashboard
+          - st01-probe-intake
+          - st02-die-attach
+          - st03-wire-bond
+          - st04-inspection
+          - st05-mold-cure
+          - st06-final-test
+          - st06-final-test-twin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workloads/${{ matrix.workload }}
+      - name: install wasm-tools and wasm-component-ld
+        # wasm-component-ld >= 0.5.27 links the transactional world's named
+        # import; wasm-tools >= 1.250 reads it (docs/DECISIONS.md).
+        run: |
+          cargo install wasm-tools --locked
+          cargo install wasm-component-ld --locked
+      - name: cargo build --release --target wasm32-wasip2
+        working-directory: workloads/${{ matrix.workload }}
+        run: cargo build --release --target wasm32-wasip2
+      - name: the naive build (st02 only)
+        if: matrix.workload == 'st02-die-attach'
+        working-directory: workloads/${{ matrix.workload }}
+        run: cargo build --release --target wasm32-wasip2 --features naive
+      - name: component exports/imports a cosmonic:kafka@0.5.0 interface
+        working-directory: workloads/${{ matrix.workload }}
+        run: |
+          wasm="$(awk '/component_path:/ {print $2}' .wash/config.yaml)"
+          wasm-tools component wit "$wasm" | grep -E 'cosmonic:kafka/(handler|producer|consumer|transaction)@0.5.0'
+      - name: component is async (async-lift / task-return present)
+        working-directory: workloads/${{ matrix.workload }}
+        run: |
+          wasm="$(awk '/component_path:/ {print $2}' .wash/config.yaml)"
+          test "$(wasm-tools print "$wasm" | grep -cE 'async-lift|task-return')" -gt 0
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - run: shellcheck -x scripts/*.sh
+
+  topics:
+    name: topic contract against Redpanda
+    runs-on: ubuntu-latest
+    services:
+      redpanda:
+        image: docker.redpanda.com/redpandadata/redpanda:v25.2.1
+        ports:
+          - 9092:9092
+          - 9644:9644
+        options: >-
+          --health-cmd "rpk cluster health | grep -E 'Healthy:.+true'"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: create and verify every topic with rpk inside the service container
+        run: |
+          c="$(docker ps --filter ancestor=docker.redpanda.com/redpandadata/redpanda:v25.2.1 --format '{{.Names}}' | head -n1)"
+          echo "redpanda container: $c"
+          # scripts/lib.sh finds the broker container by its published 9092 port.
+          bash scripts/topics.sh
+          docker exec "$c" rpk topic describe wirebond.raw | head -n 5

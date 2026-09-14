@@ -5,7 +5,9 @@
 #                            then apply one whose grant misses its DLQ (bind fails permanently)
 #   beats.sh naive           beat 4: swap st02-die-attach for the build that panics on the poison record
 #   beats.sh robust          beat 4: swap the Permanent build back in
-#   beats.sh broker-restart  beat 6: restart the broker mid-batch; wait for the line to recover
+#   beats.sh broker-restart  beat 6a: restart the broker mid-batch; wait for the line to recover
+#   beats.sh crash-st06      beat 6b: restart both ST-06 workers mid-batch: the twin replays its
+#                            uncommitted batches (duplicates), the transactional one cannot
 #   beats.sh rollout-st03 [PCT]  beat 7: re-apply ST-03 with a tighter NSOP threshold (default 12)
 #   beats.sh probe           put one probe record on dieattach.readings and watch ST-02 consume it
 set -uo pipefail
@@ -71,7 +73,34 @@ for w in d.get("warnings") or []: print("  warning:", w)'
     echo
     step "probe: one record through ST-02 proves the pipeline is back"
     "$SCRIPT_DIR/beats.sh" probe
-    info "now: make validate — lot.disposition must still have 0 duplicates; the twin ledger may not"
+    info "a Redpanda restart is fast enough that librdkafka usually just reconnects; to force a replay: make crash-st06"
+    ;;
+  crash-st06)
+    step "beat 6b: restarting st06-final-test and st06-final-test-twin mid-batch"
+    before="$(http_get "$DASHBOARD_HOST" /validate | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["ledger"]["duplicates"], d["twin"]["duplicates"], d["twin"]["records"])')"
+    info "before: ledger duplicates $(cut -d" " -f1 <<<"$before") · twin duplicates $(cut -d" " -f2 <<<"$before") · twin records $(cut -d" " -f3 <<<"$before")"
+    # stop + start: `restart` only re-resolves the spec and keeps a running
+    # service instance; a stop ends the consumer session mid-batch.
+    for w in st06-final-test st06-final-test-twin; do
+      api POST "/v1/workloads/default/$w/stop" >/dev/null
+      info "$w stop [$(api_status)]"
+    done
+    sleep 3
+    for w in st06-final-test st06-final-test-twin; do
+      api POST "/v1/workloads/default/$w/start" >/dev/null
+      info "$w start [$(api_status)]"
+    done
+    for _ in $(seq 1 30); do
+      [ "$(workload_state st06-final-test)" = running ] && [ "$(workload_state st06-final-test-twin)" = running ] && break
+      sleep 2
+    done
+    info "both running again; the twin replays from its last commit, ST-06 from the offsets its transactions committed — waiting 40 s…"
+    sleep 40
+    after="$(http_get "$DASHBOARD_HOST" /validate | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["ledger"]["duplicates"], d["twin"]["duplicates"], d["twin"]["records"])')"
+    ld="$(cut -d" " -f1 <<<"$after")"; td="$(cut -d" " -f2 <<<"$after")"
+    if [ "$ld" = 0 ]; then pass "lot.disposition (transactional, read_committed): $ld duplicates"; else fail "lot.disposition has $ld duplicates — that must never happen"; fi
+    if [ "$td" -gt 0 ] 2>/dev/null; then pass "lot.disposition.twin (at-least-once): $td duplicate units — the replayed batches, counted twice"; else warn "the twin shows no duplicates: the restart landed right after a commit; run it again"; fi
+    info "now: make validate — the transactional ledger still passes; the twin's duplicates are reported, not failed"
     ;;
   rollout-st03)
     pct="${1:-12}"

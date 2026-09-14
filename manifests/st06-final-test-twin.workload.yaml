@@ -21,7 +21,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: final-test-twin
-    image: oci.localhost:8200/apps/st06-final-test-twin:0.1.0@sha256:152c63c8f0cf9baffded2896f1ea57702f4972d0e0026b9490d85654e1668694
+    image: oci.localhost:8200/apps/st06-final-test-twin:0.1.0@sha256:c1f02da42d5c6f7b3d3ec6c869fedd3b36fd1f5f3e80425052f27ed5703a9f49
     maxRestarts: 100
     localResources:
       environment:
@@ -38,6 +38,6 @@ spec:
   # never invoked (the service above is what runs).
   components:
     - name: final-test-twin
-      image: oci.localhost:8200/apps/st06-final-test-twin:0.1.0@sha256:152c63c8f0cf9baffded2896f1ea57702f4972d0e0026b9490d85654e1668694
+      image: oci.localhost:8200/apps/st06-final-test-twin:0.1.0@sha256:c1f02da42d5c6f7b3d3ec6c869fedd3b36fd1f5f3e80425052f27ed5703a9f49
       localResources:
         allowedHosts: []

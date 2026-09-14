@@ -22,7 +22,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: simulator
-    image: oci.localhost:8200/apps/factory-simulator:0.1.0@sha256:7958fd3dac0a85d225049d3f45cbec3161c084243c6e6ae4873f0ced9fe209ff
+    image: oci.localhost:8200/apps/factory-simulator:0.1.0@sha256:b687a11a71460ab666c3f3bc798fe4d7b307ec709ed4119fff81a41f2ac70617
     maxRestarts: 100
     localResources:
       allowedHosts: []
@@ -30,6 +30,6 @@ spec:
   # never invoked (the service above is what runs).
   components:
     - name: simulator
-      image: oci.localhost:8200/apps/factory-simulator:0.1.0@sha256:7958fd3dac0a85d225049d3f45cbec3161c084243c6e6ae4873f0ced9fe209ff
+      image: oci.localhost:8200/apps/factory-simulator:0.1.0@sha256:b687a11a71460ab666c3f3bc798fe4d7b307ec709ed4119fff81a41f2ac70617
       localResources:
         allowedHosts: []

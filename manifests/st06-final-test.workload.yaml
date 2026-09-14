@@ -35,7 +35,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: final-test
-    image: oci.localhost:8200/apps/st06-final-test:0.1.0@sha256:47c360523781795ae162557ff5a0ee7b7978b798881eb687976c870e5a2ba1ea
+    image: oci.localhost:8200/apps/st06-final-test:0.1.0@sha256:63da2687ff40d15689c847cdb46c62f9793e98a03f07c924c452fd646cad1b4b
     maxRestarts: 100
     localResources:
       environment:
@@ -49,6 +49,6 @@ spec:
   # never invoked (the service above is what runs). replicas stays 1.
   components:
     - name: final-test
-      image: oci.localhost:8200/apps/st06-final-test:0.1.0@sha256:47c360523781795ae162557ff5a0ee7b7978b798881eb687976c870e5a2ba1ea
+      image: oci.localhost:8200/apps/st06-final-test:0.1.0@sha256:63da2687ff40d15689c847cdb46c62f9793e98a03f07c924c452fd646cad1b4b
       localResources:
         allowedHosts: []

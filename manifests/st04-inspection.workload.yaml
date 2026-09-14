@@ -24,7 +24,7 @@ spec:
         handler.batch.size: "1"
   components:
     - name: inspector
-      image: oci.localhost:8200/apps/st04-inspection:0.1.0@sha256:4c5afb3b6fbc8b257f7ad383d215cf4df35a8099dbbc117f37b2d1cc7f669207
+      image: oci.localhost:8200/apps/st04-inspection:0.1.0@sha256:31b0607785a420f1aab94944fad5eee50db8238ad37d2e1abf170bd519aa3b00
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

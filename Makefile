@@ -4,7 +4,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 .PHONY: help up down purge build validate start stop shift-change poison drift excursion calm status \
-        refuse naive robust broker-restart rollout-st03 probe lint
+        refuse naive robust broker-restart crash-st06 rollout-st03 probe lint
 
 help: ## this list
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[1m%-16s\033[0m %s\n", $$1, $$2}'
@@ -43,8 +43,10 @@ naive: ## beat 4: swap ST-02 for the build that panics on the poison record (aft
 	@scripts/beats.sh naive
 robust: ## beat 4: swap the Permanent build back in
 	@scripts/beats.sh robust
-broker-restart: ## beat 6: restart the broker mid-batch and watch the line recover
+broker-restart: ## beat 6a: restart the broker mid-batch and watch the line recover
 	@scripts/beats.sh broker-restart
+crash-st06: ## beat 6b: restart both ST-06 workers mid-batch — the twin ledger gains duplicates, lot.disposition none
+	@scripts/beats.sh crash-st06
 rollout-st03: ## beat 7: re-apply ST-03 with NSOP_THRESHOLD_PCT=$(PCT) (default 12)
 	@scripts/beats.sh rollout-st03 $(PCT)
 probe: ## one probe record through ST-02 (proves the pipeline is live)

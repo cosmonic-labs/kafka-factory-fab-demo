@@ -21,7 +21,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: wire-bond
-    image: oci.localhost:8200/apps/st03-wire-bond:0.1.0@sha256:9dd0c8bd54cc13cddc5d90ca946a1d5eca6dbea66bba113d0bbbc315b70a92fe
+    image: oci.localhost:8200/apps/st03-wire-bond:0.1.0@sha256:916a6d7121fb104a71283d2c06efd6faf188f69b0598ef13e9187184b5c532f4
     maxRestarts: 100
     localResources:
       environment:
@@ -38,6 +38,6 @@ spec:
   # never invoked (the service above is what runs).
   components:
     - name: wire-bond
-      image: oci.localhost:8200/apps/st03-wire-bond:0.1.0@sha256:9dd0c8bd54cc13cddc5d90ca946a1d5eca6dbea66bba113d0bbbc315b70a92fe
+      image: oci.localhost:8200/apps/st03-wire-bond:0.1.0@sha256:916a6d7121fb104a71283d2c06efd6faf188f69b0598ef13e9187184b5c532f4
       localResources:
         allowedHosts: []

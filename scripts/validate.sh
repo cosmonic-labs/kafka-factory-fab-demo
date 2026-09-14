@@ -144,10 +144,12 @@ for st, s in v["stations"].items():
                ("" if good else f"  (diff {produced - consumed - dlq - inflight})"))
     elif st == "st06twin":
         # Consumed counts what it processed, whether or not it has committed
-        # yet; only the partial batch may be outstanding.
-        pending = produced - consumed - dlq
+        # yet — including records it replayed after a restart, which are the
+        # twin ledger's duplicates; only the partial batch may be outstanding.
+        replayed = v["twin"]["duplicates"]
+        pending = produced - (consumed - replayed) - dlq
         good = 0 <= pending < batch
-        report(good, f"{st}: produced {produced} == consumed {consumed} + dlq {dlq} + partial batch {pending} (uncommitted lag {inflight})")
+        report(good, f"{st}: produced {produced} == consumed {consumed} − replayed {replayed} + dlq {dlq} + partial batch {pending} (uncommitted lag {inflight})")
     else:
         extra = f" · redelivered {s['redelivered']} · replayed {s['replayed']}" if s["redelivered"] or s["replayed"] else ""
         good = produced == consumed + dlq

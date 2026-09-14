@@ -213,17 +213,22 @@ if ! $NO_BUILD; then
 else
   step "7. build skipped (--no-build): applying committed manifests/"
 fi
+# The manifests to validate and apply: the committed ones, or — with
+# --use-kafka-yaml — copies with bootstrap.servers stripped so the bindings
+# inherit the host default (the committed files keep carrying the broker).
+APPLY_DIR="$MANIFEST_DIR"
 if $USE_KAFKA_YAML; then
+  APPLY_DIR="$(mktemp -d)"
   for w in "${WORKLOAD_LIST[@]}"; do
-    sed -i.bak '/^ *bootstrap.servers: 127.0.0.1:9092$/d' "$MANIFEST_DIR/$w.workload.yaml" && rm -f "$MANIFEST_DIR/$w.workload.yaml.bak"
+    sed '/^ *bootstrap.servers: 127.0.0.1:9092$/d' "$MANIFEST_DIR/$w.workload.yaml" > "$APPLY_DIR/$w.workload.yaml"
   done
-  info "bootstrap.servers stripped from the manifests: the bindings inherit kafka.yaml's default"
+  info "bootstrap.servers stripped from the manifests (in $APPLY_DIR): the bindings inherit kafka.yaml's default"
 fi
 
 # ---------------------------------------------------------- 8. validate manifests
 step "8. validate manifests (POST /v1/workloads/validate)"
 for w in "${WORKLOAD_LIST[@]}"; do
-  f="$MANIFEST_DIR/$w.workload.yaml"
+  f="$APPLY_DIR/$w.workload.yaml"
   [ -f "$f" ] || { fail "$w: no manifest at $f (run without --no-build once)"; failures=$((failures + 1)); continue; }
   out="$(cosmo_validate "$f")"
   if [ "$(api_status)" = "200" ] && printf '%s' "$out" | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get("valid") else 1)'; then
@@ -253,7 +258,7 @@ for _ in $(seq 1 10); do
 done
 info "line-dashboard group reset: the dashboard will fold line.metrics from the beginning"
 for w in "${WORKLOAD_LIST[@]}"; do
-  out="$(cosmo_apply "$MANIFEST_DIR/$w.workload.yaml")"
+  out="$(cosmo_apply "$APPLY_DIR/$w.workload.yaml")"
   if [ "$(api_status)" = "200" ]; then
     pass "$w: applied"
   else
@@ -322,7 +327,8 @@ cat <<EOF
    05:00  Poison pill, two ways . make poison         one NaN thickness → Err(Permanent) → dieattach.dlq with origin headers, partition advances
                                   make naive; make poison   the same record against the panicking build: five traps, then the DLQ
    06:30  Bond excursion ........ make drift; make excursion   bonder 17 NSOP → seek/replay; 20x inspection jobs → ST-04 instances climb toward 12
-   09:00  Broker restart ........ make broker-restart the silent gap, then recovery; the twin ledger gains duplicates, lot.disposition none
+   09:00  Broker restart ........ make broker-restart the silent gap, then recovery, proven by a probe record
+                                  make crash-st06     both ST-06 workers restarted mid-batch: the twin ledger gains duplicates, lot.disposition none
    11:00  Rolling update ........ make rollout-st03   re-publish ST-03 with NSOP_THRESHOLD_PCT=12; the group resumes where it stopped
 EOF
 [ "$failures" = 0 ] && exit 0 || exit 1
