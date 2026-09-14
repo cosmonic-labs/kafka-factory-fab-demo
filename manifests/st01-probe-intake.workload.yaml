@@ -25,7 +25,7 @@ spec:
         topics: "probe.lots,line.metrics"
   components:
     - name: intake
-      image: oci.localhost:8200/apps/st01-probe-intake:0.1.0@sha256:cedf9b250852ef9a35f63af7dab9c3008c1a8540da60e5c22441d5508fd97eec
+      image: oci.localhost:8200/apps/st01-probe-intake:0.1.0@sha256:c56ca68e29a53fd784f40e19a2ed0b761c21a97554f0275d1e97c44d2133a640
       poolSize: 4
       localResources:
         allowedHosts: []

@@ -44,6 +44,7 @@ const METRICS_TOPIC: &str = "line.metrics";
 const PROFILE_C: f64 = 175.0;
 const PROFILE_TOL_C: f64 = 2.0;
 const ZONES: usize = 8;
+const MIN_ZONE_SAMPLES: u64 = 4;
 
 #[derive(serde::Deserialize)]
 struct Sample {
@@ -70,6 +71,23 @@ struct PressWindow {
 
 thread_local! {
     static INSTANCE_ID: RefCell<Option<String>> = const { RefCell::new(None) };
+    static LAST_HEARTBEAT: RefCell<i64> = const { RefCell::new(0) };
+}
+
+/// The `kind: instance` heartbeat: on the first call of this instance and
+/// then every 10 s of record time, so the dashboard's "seen in the last
+/// 30 s" count follows the pool as instances are reused and reclaimed.
+fn heartbeat_due(fresh: bool, ts: Option<i64>) -> bool {
+    LAST_HEARTBEAT.with(|last| {
+        let now = ts.unwrap_or(0);
+        let mut last = last.borrow_mut();
+        if fresh || now - *last >= 10_000 {
+            *last = now;
+            true
+        } else {
+            false
+        }
+    })
 }
 
 fn instance_id() -> (String, bool) {
@@ -128,8 +146,8 @@ impl Handler for Component {
         let mut metrics: Vec<ProduceRecord> = Vec::new();
         let (id, fresh) = instance_id();
         let last_ts = records.last().and_then(|r| r.timestamp);
-        if fresh {
-            metrics.push(metric("instance", last_ts, serde_json::json!({"id": id})));
+        if heartbeat_due(fresh, last_ts) {
+            metrics.push(metric("instance", last_ts, serde_json::json!({"id": id, "fresh": fresh})));
         }
 
         let mut windows: BTreeMap<String, PressWindow> = BTreeMap::new();
@@ -187,12 +205,18 @@ impl Handler for Component {
                 .filter_map(|(i, d)| d.map(|d| (i + 1, d)))
                 .max_by(|a, b| a.1.abs().total_cmp(&b.1.abs()));
             let conformance = if w.n > 0 { round1(100.0 * w.in_band as f64 / w.n as f64) } else { 100.0 };
-            let alarm = worst.is_some_and(|(_, d)| d.abs() > PROFILE_TOL_C);
+            // A zone mean over fewer than MIN_ZONE_SAMPLES samples is noise,
+            // not drift: with one record per zone per batch (the host hands
+            // over whatever is fetched, ~1 s of data) a 3σ sample would alarm
+            // every few seconds. This is the batch-as-window approximation's
+            // limit; a stream handler with real windows would not need it.
+            let enough = w.zone_n.iter().all(|n| *n >= MIN_ZONE_SAMPLES);
+            let alarm = enough && worst.is_some_and(|(_, d)| d.abs() > PROFILE_TOL_C);
             let hold = w.rh_max > 60.0 || w.particles_max > 1000;
             let v = serde_json::json!({
                 "press": press, "samples": w.n, "conformance_pct": conformance,
                 "zones_c": zones, "drift_c": drift, "worst_zone": worst.map(|(z, d)| serde_json::json!({"zone": z, "drift_c": d})),
-                "alarm": alarm, "hold": hold, "rh_max": round1(w.rh_max), "particles_max": w.particles_max,
+                "alarm": alarm, "hold": hold, "enough_samples": enough, "rh_max": round1(w.rh_max), "particles_max": w.particles_max,
                 "window": {"from": w.first_ts, "to": w.last_ts},
             });
             summary.push(v.clone());

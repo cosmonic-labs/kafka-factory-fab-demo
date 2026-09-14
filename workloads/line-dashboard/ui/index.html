@@ -123,7 +123,7 @@
           <div><span>Lots received / hr (last 60 min)</span><em id="s1-lots">—</em></div>
           <div><span>Wafers / lot (avg)</span><em id="s1-wpl">—</em></div>
           <div><span>Upload → ack p50 / p95</span><em id="s1-lat">—</em></div>
-          <div><span>Wafer records produced</span><em id="s1-prod">—</em></div>
+          <div><span>Wafer records on probe.lots</span><em id="s1-prod">—</em></div>
           <div><span>Per-record errors · rejected uploads</span><em id="s1-err">—</em></div>
         </div>
         <svg viewBox="0 0 200 56" aria-label="lots per minute, last 4 hours" id="c-st01"></svg>
@@ -259,7 +259,7 @@
     var hb = state.sim.heartbeat || {};
     var simOn = state.sim.age_s >= 0 && state.sim.age_s < 20;
     var dotClass = simOn ? (hb.running ? 'on' : '') : 'off';
-    var ov = hb.overlay ? ' + ' + hb.overlay.scenario + ' ' + hb.overlay.frame : '';
+    var ovs = hb.overlays || (hb.overlay ? [hb.overlay] : []); var ov = ovs.length ? " + " + ovs.map(function (o) { return o.scenario + " " + o.frame; }).join(", ") : "";
     $('barr').innerHTML = 'broker 127.0.0.1:9092 <i class="dot ' + dotClass + '"></i> simulator ' +
       (simOn ? (hb.running ? hb.scenario + ' · frame ' + hb.frame + ov : 'stopped') : 'no heartbeat') +
       (state.sim.age_s >= 0 ? ' · ' + state.sim.age_s + 's ago' : '');
@@ -269,8 +269,8 @@
     $('k-uph').textContent = fmt(Math.round(s6.rate_60s * 3600));
     $('k-uph-d').textContent = fmt(led.records) + ' units dispositioned';
     $('k-yield').textContent = led.pass + led.fail ? pct(led.pass, led.pass + led.fail) : '—';
-    $('k-lots').textContent = fmt(S.st01.lots || 0);
-    $('k-lots-d').textContent = fmt(S.st01.produced) + ' wafer records';
+    $('k-lots').textContent = fmt((S.st01.lots || 0) + (S.st01.sim_lots || 0));
+    $('k-lots-d').textContent = fmt(S.st01.http_lots || 0) + ' via POST /lot · ' + fmt(S.st01.sim_lots || 0) + ' from probers';
     var crit = state.faults.filter(function (f) { return f.severity === 'crit'; }).length;
     var warn = state.faults.filter(function (f) { return f.severity === 'warn'; }).length;
     $('k-faults').textContent = crit + warn;
@@ -285,9 +285,10 @@
     var s1 = S.st01;
     var last60 = s1.per_min.slice(-60).reduce(function (a, b) { return a + b; }, 0);
     $('s1-lots').textContent = fmt(last60);
-    $('s1-wpl').textContent = s1.lots ? (s1.wafers / s1.lots).toFixed(1) : '—';
-    $('s1-lat').textContent = s1.latency_p50 != null ? s1.latency_p50 + ' / ' + s1.latency_p95 + ' ms' : '—';
-    $('s1-prod').textContent = fmt(s1.produced);
+    var allLots = (s1.lots || 0) + (s1.sim_lots || 0), allWafers = (s1.wafers || 0) + (s1.sim_wafers || 0);
+    $('s1-wpl').textContent = allLots ? (allWafers / allLots).toFixed(1) : '—';
+    $('s1-lat').textContent = s1.latency_p50 != null ? s1.latency_p50 + ' / ' + s1.latency_p95 + ' ms (HTTP lots)' : '— (no HTTP lot yet)';
+    $('s1-prod').textContent = fmt(s1.produced) + ' via HTTP · ' + fmt(s1.sim_wafers || 0) + ' from probers';
     $('s1-err').textContent = fmt(s1.record_errors || 0) + ' · ' + fmt(s1.rejected || 0);
     lineChart($('c-st01'), s1.per_min, 'var(--accent)', 'var(--accent-soft)', 'lots / min · 4 h');
     setFault('f-st01', s1.faults);

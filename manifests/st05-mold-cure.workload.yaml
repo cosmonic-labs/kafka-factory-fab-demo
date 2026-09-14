@@ -26,7 +26,7 @@ spec:
         max.poll.interval.ms: "900000"
   components:
     - name: cure-profile
-      image: oci.localhost:8200/apps/st05-mold-cure:0.1.0@sha256:5b281cb62f38f281a9e850b2d84be1146f0577a053883c78f020b3ca96defe70
+      image: oci.localhost:8200/apps/st05-mold-cure:0.1.0@sha256:fa0a06e96a01517c3b1e9ae16224870baa3ddcfc4ca4fcb987389e801fb9d9b7
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

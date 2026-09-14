@@ -200,6 +200,21 @@ for e in rows:
         print(e)
 '
 }
+# cosmo_bind_error <name> — the plugin's bind refusal for a workload, from
+# the daemon log (the sentence names the key; empty when none was logged)
+cosmo_bind_error() {
+  api GET "/v1/logs?workload=default/$1&limit=100" | python3 -c '
+import json, sys
+try:
+    rows = json.load(sys.stdin).get("records") or []
+except Exception:
+    sys.exit(0)
+for r in rows:  # newest first
+    f = r.get("fields") or {}
+    if r.get("level") == "ERROR" and "bind" in (r.get("message") or ""):
+        print(f.get("err") or f.get("reason") or r.get("message")); break
+'
+}
 # cosmo_delete <name> — DELETE /v1/workloads/default/<name>
 cosmo_delete() { api DELETE "/v1/workloads/default/$1"; }
 

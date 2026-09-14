@@ -65,11 +65,28 @@ struct Reading {
 
 thread_local! {
     static INSTANCE_ID: RefCell<Option<String>> = const { RefCell::new(None) };
+    static LAST_HEARTBEAT: RefCell<i64> = const { RefCell::new(0) };
     static HIGH_WATER: RefCell<BTreeMap<i32, i64>> = const { RefCell::new(BTreeMap::new()) };
 }
 
 /// A random-ish id, minted the first time this instance is called (the
 /// std hasher is seeded from the host's random source per instance).
+/// The `kind: instance` heartbeat: on the first call of this instance and
+/// then every 10 s of record time, so the dashboard's "seen in the last
+/// 30 s" count follows the pool as instances are reused and reclaimed.
+fn heartbeat_due(fresh: bool, ts: Option<i64>) -> bool {
+    LAST_HEARTBEAT.with(|last| {
+        let now = ts.unwrap_or(0);
+        let mut last = last.borrow_mut();
+        if fresh || now - *last >= 10_000 {
+            *last = now;
+            true
+        } else {
+            false
+        }
+    })
+}
+
 fn instance_id() -> (String, bool) {
     INSTANCE_ID.with(|slot| {
         let mut slot = slot.borrow_mut();
@@ -181,8 +198,8 @@ impl Handler for Component {
         let mut metrics: Vec<ProduceRecord> = Vec::new();
         let (id, fresh) = instance_id();
         let last_ts = records.last().and_then(|r| r.timestamp);
-        if fresh {
-            metrics.push(metric("instance", last_ts, serde_json::json!({"id": id})));
+        if heartbeat_due(fresh, last_ts) {
+            metrics.push(metric("instance", last_ts, serde_json::json!({"id": id, "fresh": fresh})));
         }
         if let (Some(first), Some(last)) = (records.first(), records.last()) {
             let redelivered = note_redelivery(first.partition, first.offset, last.offset);
@@ -192,6 +209,9 @@ impl Handler for Component {
                     last_ts,
                     serde_json::json!({"n": redelivered, "partition": first.partition, "offset": first.offset}),
                 ));
+                // Sent before the work: a redelivery that traps again (the
+                // naive build's five-trap path) would otherwise never report.
+                let _ = producer::send_batch(METRICS_TOPIC.to_string(), std::mem::take(&mut metrics)).await;
             }
         }
 

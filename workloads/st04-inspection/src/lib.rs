@@ -54,7 +54,24 @@ struct Job {
 
 thread_local! {
     static INSTANCE_ID: RefCell<Option<String>> = const { RefCell::new(None) };
+    static LAST_HEARTBEAT: RefCell<i64> = const { RefCell::new(0) };
     static JOBS_ON_THIS_INSTANCE: RefCell<u64> = const { RefCell::new(0) };
+}
+
+/// The `kind: instance` heartbeat: on the first call of this instance and
+/// then every 10 s of record time, so the dashboard's "seen in the last
+/// 30 s" count follows the pool as instances are reused and reclaimed.
+fn heartbeat_due(fresh: bool, ts: Option<i64>) -> bool {
+    LAST_HEARTBEAT.with(|last| {
+        let now = ts.unwrap_or(0);
+        let mut last = last.borrow_mut();
+        if fresh || now - *last >= 10_000 {
+            *last = now;
+            true
+        } else {
+            false
+        }
+    })
 }
 
 fn instance_id() -> (String, bool) {
@@ -100,9 +117,11 @@ fn inspect(job: &Job) -> (u64, u64) {
 }
 
 fn verdict(digest: u64) -> (&'static str, f64) {
-    // ~1 in 12 strips shows a defect; the class and void % follow the digest.
-    let pct = (digest % 10_000) as f64 / 100.0;
-    match digest % 12 {
+    // ~1 in 12 strips shows a defect; the class and void % follow the digest
+    // (mixed first: the hash loop's low bits are not uniform).
+    let mixed = (digest ^ (digest >> 29)).wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 13;
+    let pct = (mixed % 10_000) as f64 / 100.0;
+    match mixed % 12 {
         0 => ("void>10%", 10.0 + pct % 15.0),
         1 => ("bridge", pct % 4.0),
         2 => ("lift", pct % 6.0),
@@ -145,8 +164,8 @@ impl Handler for Component {
         let mut metrics: Vec<ProduceRecord> = Vec::new();
         let (id, fresh) = instance_id();
         let last_ts = records.last().and_then(|r| r.timestamp);
-        if fresh {
-            metrics.push(metric("instance", last_ts, serde_json::json!({"id": id})));
+        if heartbeat_due(fresh, last_ts) {
+            metrics.push(metric("instance", last_ts, serde_json::json!({"id": id, "fresh": fresh})));
         }
 
         let mut results: Vec<ProduceRecord> = Vec::new();

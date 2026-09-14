@@ -41,7 +41,7 @@ use std::rc::Rc;
 
 use bindings::cosmonic::kafka::consumer::{Consumer, RebalanceEvent, RebalanceProtocol};
 use bindings::cosmonic::kafka::producer;
-use bindings::cosmonic::kafka::types::{ConsumedRecord, Header, PartitionRef, Position, ProduceRecord};
+use bindings::cosmonic::kafka::types::{ConsumedRecord, ErrorCode, Header, PartitionRef, Position, ProduceRecord};
 use bindings::exports::wasi::cli::run::Guest as RunGuest;
 
 struct Component;
@@ -169,11 +169,12 @@ fn close_window(st: &mut State, cfg: &Config, bonder_id: u32, end_ts: i64, reaso
     b.windows += 1;
     if nsop {
         b.nsop_windows += 1;
-    } else {
-        // Only healthy windows move the trailing mean, so a sag cannot hide
-        // itself by dragging the baseline down.
+    } else if delta_pct.is_none_or(|d| d.abs() < cfg.nsop_pct / 2.0) {
+        // Only genuinely healthy windows move the trailing mean (slowly), so
+        // a sag that lands just under the threshold cannot drag the baseline
+        // down and hide the ones that follow.
         b.trailing = Some(match b.trailing {
-            Some(t) => 0.8 * t + 0.2 * p_mean,
+            Some(t) => 0.9 * t + 0.1 * p_mean,
             None => p_mean,
         });
     }
@@ -256,12 +257,27 @@ async fn flush(consumer: &Consumer, out_topic: &str, state: &Shared) -> Result<(
     if !metrics.is_empty() {
         let _ = producer::send_batch(METRICS_TOPIC.to_string(), metrics).await;
     }
-    // Stored positions, only after the outputs are acked.
-    let results = consumer.commit(Vec::new()).await.map_err(|e| format!("commit: {}", e.message))?;
-    if let Some(bad) = results.iter().find(|r| r.error.is_some()) {
-        return Err(format!("commit: partition {} failed: {:?}", bad.partition, bad.error));
+    // Stored positions, only after the outputs are acked. `no-offset` is
+    // "nothing stored since the last commit" (every position was already
+    // committed, or a seek just reset one) — not a failure; a retriable
+    // error waits for the next flush; anything else exits the service so the
+    // supervisor restarts it from committed offsets.
+    match consumer.commit(Vec::new()).await {
+        Ok(results) => {
+            if let Some(bad) = results.iter().find(|r| !matches!(r.error, None | Some(ErrorCode::NoOffset))) {
+                return Err(format!("commit: partition {} failed: {:?}", bad.partition, bad.error));
+            }
+            Ok(())
+        }
+        Err(e) if matches!(e.code, ErrorCode::NoOffset) => Ok(()),
+        Err(e) if e.retriable && !e.fatal => {
+            state.borrow_mut().metrics.push(metric("fault", None, serde_json::json!({
+                "severity": "warn", "text": format!("commit deferred: {} (retriable)", e.message),
+            })));
+            Ok(())
+        }
+        Err(e) => Err(format!("commit: {} ({:?}, fatal={})", e.message, e.code, e.fatal)),
     }
-    Ok(())
 }
 
 async fn dead_letter(dlq_topic: &str, rec: &ConsumedRecord, reason: String) -> Result<(), String> {
@@ -415,7 +431,7 @@ impl RunGuest for Component {
                 let result = match target {
                     Some(off) => consumer.seek(vec![pref], Position::Exact(off)).await.map(|()| off),
                     None => Err(bindings::cosmonic::kafka::types::Error {
-                        code: bindings::cosmonic::kafka::types::ErrorCode::NoOffset,
+                        code: ErrorCode::NoOffset,
                         message: "no offset for that time".into(),
                         fatal: false,
                         retriable: false,

@@ -176,8 +176,9 @@ struct State {
     running: bool,
     scenario: String,
     frame: u32,
-    /// One-shot overlay: (scenario, frame).
-    overlay: Option<(String, u32)>,
+    /// One-shot overlays, each at its own frame; several can run at once
+    /// (drift and excursion together are demo beat 5).
+    overlays: Vec<(String, u32)>,
     /// Counters for the heartbeat (and the per-pass id stamp).
     passes: u64,
     overlays_played: u64,
@@ -244,7 +245,11 @@ fn apply_control(catalog: &Catalog, state: &Shared, raw: &[u8]) {
                 eprintln!("factory-simulator: {name:?} is a loop scenario; use cmd=loop");
                 return;
             }
-            st.overlay = Some((name.clone(), 0));
+            if st.overlays.iter().any(|(n, _)| *n == name) {
+                println!("factory-simulator: overlay {name} already playing");
+                return;
+            }
+            st.overlays.push((name.clone(), 0));
             st.overlays_played += 1;
             println!("factory-simulator: overlay → {name}");
         }
@@ -343,9 +348,9 @@ fn stamp(line: &Line, topic: &str, epoch: &str, pass: u64, overlay: bool) -> Pro
 /// Play one frame: the loop scenario's topics (baseline fills any it omits),
 /// then the overlay's. Returns per-topic produced counts.
 async fn play_frame(catalog: &Catalog, state: &Shared, epoch: &str) -> BTreeMap<String, u64> {
-    let (scenario, frame, overlay, pass, overlays) = {
+    let (scenario, frame, overlays, pass, played) = {
         let st = state.borrow();
-        (st.scenario.clone(), st.frame, st.overlay.clone(), st.passes, st.overlays_played)
+        (st.scenario.clone(), st.frame, st.overlays.clone(), st.passes, st.overlays_played)
     };
     let mut plan: BTreeMap<String, Vec<ProduceRecord>> = BTreeMap::new();
     for topic in catalog.topics_of("baseline") {
@@ -360,12 +365,12 @@ async fn play_frame(catalog: &Catalog, state: &Shared, epoch: &str) -> BTreeMap<
                 .extend(lines.iter().map(|l| stamp(l, &topic, epoch, pass, false)));
         }
     }
-    if let Some((name, oframe)) = overlay {
+    for (name, oframe) in overlays {
         for topic in catalog.topics_of(&name) {
             if let Some(lines) = catalog.lines(&name, &topic, oframe) {
                 plan.entry(topic.clone())
                     .or_default()
-                    .extend(lines.iter().map(|l| stamp(l, &topic, epoch, overlays, true)));
+                    .extend(lines.iter().map(|l| stamp(l, &topic, epoch, played, true)));
             }
         }
     }
@@ -406,14 +411,16 @@ fn advance(catalog: &Catalog, state: &Shared) {
             st.scenario = next;
         }
     }
-    if let Some((name, oframe)) = st.overlay.take() {
+    let mut keep = Vec::new();
+    for (name, oframe) in st.overlays.drain(..) {
         let oframes = catalog.meta.get(&name).map(|m| m.frames).unwrap_or(1);
         if oframe + 1 < oframes {
-            st.overlay = Some((name, oframe + 1));
+            keep.push((name, oframe + 1));
         } else {
             println!("factory-simulator: overlay {name} finished");
         }
     }
+    st.overlays = keep;
 }
 
 async fn emit_metrics(records: Vec<ProduceRecord>) {
@@ -490,7 +497,8 @@ impl RunGuest for Component {
                         "running": st.running,
                         "scenario": st.scenario,
                         "frame": st.frame,
-                        "overlay": st.overlay.as_ref().map(|(n, f)| serde_json::json!({"scenario": n, "frame": f})),
+                        "overlay": st.overlays.first().map(|(n, f)| serde_json::json!({"scenario": n, "frame": f})),
+                        "overlays": st.overlays.iter().map(|(n, f)| serde_json::json!({"scenario": n, "frame": f})).collect::<Vec<_>>(),
                         "passes": st.passes,
                         "epoch": epoch,
                         "controls": st.control_seen,

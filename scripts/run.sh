@@ -194,7 +194,10 @@ if ! $NO_BUILD; then
     if [ "$w" = "st02-die-attach-naive" ]; then
       wash oci push --insecure "oci.localhost:8200/apps/st02-die-attach-naive:0.1.0" "$wasm" >/dev/null 2>&1 \
         || { fail "$w: wash oci push failed"; failures=$((failures + 1)); continue; }
-      digest="$(wash oci pull --insecure "oci.localhost:8200/apps/st02-die-attach-naive:0.1.0" --output /dev/null 2>&1 | grep -oE 'sha256:[0-9a-f]{64}' | head -n1)"
+      # The registry answers the manifest's digest in Docker-Content-Digest.
+      digest="$(curl -sS -o /dev/null -D - -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
+        "$(ingress_base)/v2/apps/st02-die-attach-naive/manifests/0.1.0" -H 'Host: oci.localhost' 2>/dev/null \
+        | awk 'tolower($1)=="docker-content-digest:" {print $2}' | tr -d '\r')"
       ref="oci.localhost:8200/apps/st02-die-attach-naive:0.1.0${digest:+@$digest}"
       sed -e "s|image: oci.localhost:8200/apps/st02-die-attach:0.1.0|image: $ref|" \
           -e 's|name: "st02-die-attach"|name: "st02-die-attach"  # the naive build (run.sh --naive)|' \

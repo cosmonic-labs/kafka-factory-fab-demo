@@ -29,7 +29,7 @@ mod bindings {
 
 use bindings::cosmonic::kafka::consumer::Consumer;
 use bindings::cosmonic::kafka::producer;
-use bindings::cosmonic::kafka::types::{ConsumedRecord, ProduceRecord};
+use bindings::cosmonic::kafka::types::{ConsumedRecord, ErrorCode, ProduceRecord};
 use bindings::exports::wasi::cli::run::Guest as RunGuest;
 
 struct Component;
@@ -171,7 +171,8 @@ impl RunGuest for Component {
                 // Stored positions, after the outputs are acked — but only
                 // every COMMIT_EVERY batches (the demo's replay window).
                 match consumer.commit(Vec::new()).await {
-                    Ok(results) if results.iter().all(|r| r.error.is_none()) => since_commit = 0,
+                    Ok(results) if results.iter().all(|r| matches!(r.error, None | Some(ErrorCode::NoOffset))) => since_commit = 0,
+                    Err(e) if matches!(e.code, ErrorCode::NoOffset) => since_commit = 0,
                     Ok(results) => {
                         eprintln!("st06-twin: commit failed on a partition: {:?}", results.iter().find_map(|r| r.error.clone()));
                         let _ = consumer.close().await;

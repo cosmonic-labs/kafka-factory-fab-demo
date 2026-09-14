@@ -22,7 +22,7 @@ spec:
         dead-letter.topic: "dieattach.dlq"
   components:
     - name: processor
-      image: oci.localhost:8200/apps/st02-die-attach:0.1.0@sha256:997fb651e65e5048631ffdc8aa06f912cee648149782d52730f0b98d9a2ca130
+      image: oci.localhost:8200/apps/st02-die-attach:0.1.0@sha256:3f13d2348c353ee5d51e4aa77b04524d0453328efcc9b2d23525dcedc1ec7d22
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

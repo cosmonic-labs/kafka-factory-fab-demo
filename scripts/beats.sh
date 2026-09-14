@@ -27,15 +27,20 @@ for e in d.get("errors") or []: print("  refused:", e)
 for w in d.get("warnings") or []: print("  warning:", w)'
     step "beat 2b: a grant that misses its DLQ binds permanently Failed (no retry)"
     cosmo_apply "$MANIFEST_DIR/refused/grant-misses-dlq.workload.yaml" >/dev/null
-    info "applied st07-refused-grant [$(api_status)]; waiting for the bind…"
+    info "applied st07-refused-grant [$(api_status)] (the apply is accepted; the BIND is what refuses); waiting…"
+    err=""
     for _ in $(seq 1 20); do
       s="$(workload_state st07-refused-grant)"
-      [ "$s" = "failed" ] && break
+      err="$(cosmo_bind_error st07-refused-grant)"
+      [ -n "$err" ] && break
       [ "$s" = "running" ] && break
       sleep 2
     done
-    echo "state:   $s"
-    echo "message: $(workload_message st07-refused-grant)"
+    echo "state:        $s"
+    echo "bind refusal: ${err:-(none logged)}"
+    if [ "$s" != failed ] && [ -n "$err" ]; then
+      info "this Desktop build retries the refused bind (attempt n/5, 30 s apart) before it shows Failed; newer daemons classify the plugin's refusal as permanent on the first attempt"
+    fi
     cosmo_delete st07-refused-grant >/dev/null; info "st07-refused-grant deleted"
     ;;
   naive|robust)
@@ -81,6 +86,8 @@ for w in d.get("warnings") or []: print("  warning:", w)'
     rec='{"f":0,"die":"D-PROBE001","head":"H1","bl_um":25.1,"epoxy_mg":3.2,"dx_um":1.0,"dy_um":-1.0,"theta_deg":0.01,"stage_c":25.4}'
     before="$(http_get "$DASHBOARD_HOST" /validate | python3 -c 'import json,sys; print(json.load(sys.stdin)["stations"]["st02"]["consumed"])')"
     printf '%s\n' "$rec" | rpk topic produce dieattach.readings -k D-PROBE001 >/dev/null
+    # Count it as produced on line.metrics so validate.sh still balances.
+    printf '{"station":"sim","kind":"produced","topic":"dieattach.readings","n":1,"probe":true}\n' | rpk topic produce line.metrics -k sim >/dev/null
     info "probe record produced to dieattach.readings; waiting for ST-02 to consume it…"
     for _ in $(seq 1 30); do
       after="$(http_get "$DASHBOARD_HOST" /validate | python3 -c 'import json,sys; print(json.load(sys.stdin)["stations"]["st02"]["consumed"])')"

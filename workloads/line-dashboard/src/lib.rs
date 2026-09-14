@@ -167,6 +167,8 @@ struct Model {
     sim_seen: i64,
     /// Every fault on the line, newest first.
     faults: VecDeque<Value>,
+    /// Last time each (station, text) fault was pushed, for de-duplication.
+    fault_seen: BTreeMap<String, i64>,
     /// Lag per group, as `scripts/validate.sh` last published it.
     lag: Value,
     ledger: Ledger,
@@ -209,6 +211,21 @@ fn station_label(id: &str) -> &'static str {
 }
 
 fn push_fault(m: &mut Model, station: &str, ts: i64, severity: &str, text: &str, state: &str) {
+    // The same fault (station + text) within 60 s is one row, not many: a
+    // window that alarms every batch would otherwise flood the ledger and
+    // push the rare, important rows out of it.
+    let key = format!("{station}|{text}");
+    if let Some(prev) = m.fault_seen.get(&key) {
+        if ts - prev < 60_000 {
+            m.fault_seen.insert(key, ts);
+            return;
+        }
+    }
+    m.fault_seen.insert(key, ts);
+    if m.fault_seen.len() > 500 {
+        let cutoff = ts - 600_000;
+        m.fault_seen.retain(|_, t| *t >= cutoff);
+    }
     let f = m.stations.entry(station.to_string()).or_default().fault(ts, severity, text, state);
     let mut row = f;
     row["station"] = json!(station);
@@ -230,8 +247,18 @@ fn fold_metric(m: &mut Model, rec: &ConsumedRecord, v: &Value) {
         match kind.as_str() {
             "produced" => {
                 let topic = v.get("topic").and_then(Value::as_str).unwrap_or("?").to_string();
-                *m.sim_produced.entry(topic).or_default() += n;
+                *m.sim_produced.entry(topic.clone()).or_default() += n;
                 m.sim_seen = ts.max(m.sim_seen);
+                if topic == "probe.lots" {
+                    // The simulator puts lots on probe.lots directly (the same
+                    // records ST-01 would have produced): ST-01's panel counts
+                    // them as lots received, 25 wafers to a lot.
+                    let st = m.stations.entry("st01".to_string()).or_default();
+                    let lots = n.div_ceil(25);
+                    st.bump("sim_lots", lots);
+                    st.bump("sim_wafers", n);
+                    st.ring.add(ts, lots);
+                }
             }
             "sim" => {
                 m.sim = v.clone();
@@ -302,6 +329,7 @@ fn fold_metric(m: &mut Model, rec: &ConsumedRecord, v: &Value) {
             st.produced += n;
             if station == "st01" {
                 st.bump("lots", 1);
+                st.bump("http_lots", 1);
                 st.bump("wafers", n);
                 if let Some(p) = v.get("prober").and_then(Value::as_str) {
                     st.num("last_prober", p);
@@ -380,10 +408,11 @@ fn fold_metric(m: &mut Model, rec: &ConsumedRecord, v: &Value) {
                                 if alarm || hold {
                                     let worst = p.get("worst_zone");
                                     let text = if alarm {
+                                        let drift = worst.and_then(|w| w.get("drift_c")).and_then(Value::as_f64).unwrap_or(0.0);
                                         format!(
-                                            "zone {} {:+.1} °C against the cure profile · press {id}",
+                                            "zone {} {} °C against the cure profile · press {id}",
                                             worst.and_then(|w| w.get("zone")).and_then(Value::as_u64).unwrap_or(0),
-                                            worst.and_then(|w| w.get("drift_c")).and_then(Value::as_f64).unwrap_or(0.0)
+                                            if drift > 0.0 { "above" } else { "below" }
                                         )
                                     } else {
                                         format!("humidity / particle hold · press {id}")
