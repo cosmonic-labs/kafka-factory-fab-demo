@@ -319,24 +319,24 @@ if $NO_SIM; then "$SCRIPT_DIR/sim.sh" stop >/dev/null; info "loop stopped (--no-
 base="$(ingress_base)"
 port="${base##*:}"
 step "Fab 3 is up"
-cat <<EOF
-  dashboard   http://$DASHBOARD_HOST:$port/      (Fab 3 Line — polls /api/state every 2 s)
-  ST-01       http://$ST01_HOST:$port/lot        (POST a lot JSON; one line per wafer)
-  console     http://localhost:8090/                   (Redpanda Console: topics, messages + headers, consumer-group lag)
-  metrics     make metrics → http://localhost:3000/d/fab3-line   (Grafana: records/s per topic, lag per group, latency)
-  on screen   search "fab-" or "fab-factory" in Desktop's Workloads grid (every workload is labeled app.kubernetes.io/part-of=fab-factory)
-  validate    make validate                                     (produced == consumed + dlq, lag, duplicates)
-  simulator   make start | stop | shift-change | poison | drift | excursion | calm | status
-
-  demo beats (docs/design.html §5):
-   00:00  Quiet Tuesday ......... make start          the baseline loop; every panel's numbers move; make validate reads lag 0
-   01:30  The binding is the config  make refuse      a manifest with plugin.library.paths, and one whose grant misses its DLQ, both refused by name
-   03:00  Shift change .......... make shift-change   100x lots for 60 s, 2x mold telemetry, then back to baseline by itself
-   05:00  Poison pill, two ways . make poison         one NaN thickness → Err(Permanent) → dieattach.dlq with origin headers, partition advances
-                                  make naive; make poison   the same record against the panicking build: five traps, then the DLQ
-   06:30  Bond excursion ........ make drift; make excursion   bonder 17 NSOP → seek/replay; 20x inspection jobs → ST-04 instances climb toward 12
-   09:00  Broker restart ........ make broker-restart the silent gap, then recovery, proven by a probe record
-                                  make crash-st06     both ST-06 workers restarted mid-batch: the twin ledger gains duplicates, lot.disposition none
-   11:00  Rolling update ........ make rollout-st03   re-publish ST-03 with NSOP_THRESHOLD_PCT=12; the group resumes where it stopped
-EOF
+# printf, not cat <<EOF: bash 5.x heredocs past 512 bytes hang on macOS.
+printf '%s\n' \
+  "  dashboard   http://$DASHBOARD_HOST:$port/      (Fab 3 Line — polls /api/state every 2 s)" \
+  "  ST-01       http://$ST01_HOST:$port/lot        (POST a lot JSON; one line per wafer)" \
+  "  console     http://localhost:8090/                   (Redpanda Console: topics, messages + headers, consumer-group lag)" \
+  "  metrics     make metrics → http://localhost:3000/d/fab3-line   (Grafana: records/s per topic, lag per group, latency)" \
+  "  on screen   search \"fab-\" or \"fab-factory\" in Desktop's Workloads grid (every workload is labeled app.kubernetes.io/part-of=fab-factory)" \
+  "  validate    make validate                                     (produced == consumed + dlq, lag, duplicates)" \
+  "  simulator   make start | stop | shift-change | poison | drift | excursion | calm | status" \
+  "" \
+  "  demo beats (docs/design.html §5):" \
+  "   00:00  Quiet Tuesday ......... make start          the baseline loop; every panel's numbers move; make validate reads lag 0" \
+  "   01:30  The binding is the config  make refuse      a manifest with plugin.library.paths, and one whose grant misses its DLQ, both refused by name" \
+  "   03:00  Shift change .......... make shift-change   100x lots for 60 s, 2x mold telemetry, then back to baseline by itself" \
+  "   05:00  Poison pill, two ways . make poison         one NaN thickness → Err(Permanent) → dieattach.dlq with origin headers, partition advances" \
+  "                                  make naive; make poison   the same record against the panicking build: five traps, then the DLQ" \
+  "   06:30  Bond excursion ........ make drift; make excursion   bonder 17 NSOP → seek/replay; 20x inspection jobs → ST-04 instances climb toward 12" \
+  "   09:00  Broker restart ........ make broker-restart the silent gap, then recovery, proven by a probe record" \
+  "                                  make crash-st06     both ST-06 workers restarted mid-batch: the twin ledger gains duplicates, lot.disposition none" \
+  "   11:00  Rolling update ........ make rollout-st03   re-publish ST-03 with NSOP_THRESHOLD_PCT=12; the group resumes where it stopped"
 [ "$failures" = 0 ] && exit 0 || exit 1
