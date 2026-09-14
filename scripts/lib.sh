@@ -32,16 +32,20 @@ MANIFEST_DIR="$REPO_ROOT/manifests"
 WORKLOAD_DIR="$REPO_ROOT/workloads"
 
 # Every workload, in apply order (dashboard first so it sees every metric,
-# then the simulator, then the stations). st02-die-attach-naive is not here:
-# run.sh --naive swaps it in for st02-die-attach.
-WORKLOADS=(line-dashboard factory-simulator st01-probe-intake st02-die-attach st03-wire-bond st04-inspection st05-mold-cure st06-final-test st06-final-test-twin)
+# then the simulator, then the stations). fab-st02-die-attach-naive is not here:
+# run.sh --naive swaps it in for fab-st02-die-attach.
+WORKLOADS=(fab-line-dashboard fab-factory-simulator fab-st01-probe-intake fab-st02-die-attach fab-st03-wire-bond fab-st04-inspection fab-st05-mold-cure fab-st06-final-test fab-st06-final-test-twin)
+# Every workload name carries the `fab-` prefix (and the app.kubernetes.io/
+# part-of=fab-factory label) so the line is one search away in the Workloads
+# grid; the source directory is the name without the prefix.
+workload_dir() { echo "$WORKLOAD_DIR/${1#fab-}"; }
 
 # Consumer groups whose lag validate.sh checks.
 GROUPS_TO_CHECK=(factory-simulator st02-die-attach st03-wire-bond st04-inspection st05-mold-cure st06-final-test st06-final-test-twin line-dashboard)
 
 BROKER_ADDR="${BROKER_ADDR:-127.0.0.1:9092}"
-DASHBOARD_HOST="line-dashboard.localhost"
-ST01_HOST="st01-probe-intake.localhost"
+DASHBOARD_HOST="fab-line-dashboard.localhost"
+ST01_HOST="fab-st01-probe-intake.localhost"
 
 # ------------------------------------------------------------- container ---
 # docker or podman; the compose subcommand of whichever is present.

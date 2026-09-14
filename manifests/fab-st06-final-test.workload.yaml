@@ -1,8 +1,15 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "st06-final-test"
+  name: "fab-st06-final-test"
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-st06-final-test
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: st06
 spec:
   hostInterfaces:
     - namespace: cosmonic
@@ -35,7 +42,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: final-test
-    image: oci.localhost:8200/apps/st06-final-test:0.1.0@sha256:63da2687ff40d15689c847cdb46c62f9793e98a03f07c924c452fd646cad1b4b
+    image: oci.localhost:8200/apps/fab-st06-final-test:0.1.0@sha256:d7cc402a01b289089505b382da7936785f791b6cd323934b4c4750b4e819f9a2
     maxRestarts: 100
     localResources:
       environment:
@@ -49,6 +56,6 @@ spec:
   # never invoked (the service above is what runs). replicas stays 1.
   components:
     - name: final-test
-      image: oci.localhost:8200/apps/st06-final-test:0.1.0@sha256:63da2687ff40d15689c847cdb46c62f9793e98a03f07c924c452fd646cad1b4b
+      image: oci.localhost:8200/apps/fab-st06-final-test:0.1.0@sha256:d7cc402a01b289089505b382da7936785f791b6cd323934b4c4750b4e819f9a2
       localResources:
         allowedHosts: []

@@ -3,7 +3,7 @@
 #
 #   beats.sh refuse          beat 2: validate a manifest with a host-only key (refused by name),
 #                            then apply one whose grant misses its DLQ (bind fails permanently)
-#   beats.sh naive           beat 4: swap st02-die-attach for the build that panics on the poison record
+#   beats.sh naive           beat 4: swap fab-st02-die-attach for the build that panics on the poison record
 #   beats.sh robust          beat 4: swap the Permanent build back in
 #   beats.sh broker-restart  beat 6a: restart the broker mid-batch; wait for the line to recover
 #   beats.sh crash-st06      beat 6b: restart both ST-06 workers mid-batch: the twin replays its
@@ -29,11 +29,11 @@ for e in d.get("errors") or []: print("  refused:", e)
 for w in d.get("warnings") or []: print("  warning:", w)'
     step "beat 2b: a grant that misses its DLQ binds permanently Failed (no retry)"
     cosmo_apply "$MANIFEST_DIR/refused/grant-misses-dlq.workload.yaml" >/dev/null
-    info "applied st07-refused-grant [$(api_status)] (the apply is accepted; the BIND is what refuses); waiting…"
+    info "applied fab-st07-refused-grant [$(api_status)] (the apply is accepted; the BIND is what refuses); waiting…"
     err=""
     for _ in $(seq 1 20); do
-      s="$(workload_state st07-refused-grant)"
-      err="$(cosmo_bind_error st07-refused-grant)"
+      s="$(workload_state fab-st07-refused-grant)"
+      err="$(cosmo_bind_error fab-st07-refused-grant)"
       [ -n "$err" ] && break
       [ "$s" = "running" ] && break
       sleep 2
@@ -43,15 +43,15 @@ for w in d.get("warnings") or []: print("  warning:", w)'
     if [ "$s" != failed ] && [ -n "$err" ]; then
       info "this Desktop build retries the refused bind (attempt n/5, 30 s apart) before it shows Failed; newer daemons classify the plugin's refusal as permanent on the first attempt"
     fi
-    cosmo_delete st07-refused-grant >/dev/null; info "st07-refused-grant deleted"
+    cosmo_delete fab-st07-refused-grant >/dev/null; info "fab-st07-refused-grant deleted"
     ;;
   naive|robust)
-    m="$MANIFEST_DIR/st02-die-attach$([ "$verb" = naive ] && echo -naive).workload.yaml"
+    m="$MANIFEST_DIR/fab-st02-die-attach$([ "$verb" = naive ] && echo -naive).workload.yaml"
     [ -f "$m" ] || die "no $m — run scripts/run.sh --naive once to build and push the naive image"
-    step "beat 4: swapping st02-die-attach → $(pinned_image "st02-die-attach$([ "$verb" = naive ] && echo -naive)")"
+    step "beat 4: swapping fab-st02-die-attach → $(pinned_image "fab-st02-die-attach$([ "$verb" = naive ] && echo -naive)")"
     cosmo_apply "$m" >/dev/null; info "applied [$(api_status)]"
-    for _ in $(seq 1 20); do [ "$(workload_state st02-die-attach)" = running ] && break; sleep 2; done
-    pass "st02-die-attach is $(workload_state st02-die-attach) on the $verb build (same group, same DLQ)"
+    for _ in $(seq 1 20); do [ "$(workload_state fab-st02-die-attach)" = running ] && break; sleep 2; done
+    pass "fab-st02-die-attach is $(workload_state fab-st02-die-attach) on the $verb build (same group, same DLQ)"
     [ "$verb" = naive ] && info "now: make poison — the record traps five times (watch ST-02's redeliveries), then lands in dieattach.dlq"
     ;;
   broker-restart)
@@ -76,22 +76,22 @@ for w in d.get("warnings") or []: print("  warning:", w)'
     info "a Redpanda restart is fast enough that librdkafka usually just reconnects; to force a replay: make crash-st06"
     ;;
   crash-st06)
-    step "beat 6b: restarting st06-final-test and st06-final-test-twin mid-batch"
+    step "beat 6b: restarting fab-st06-final-test and fab-st06-final-test-twin mid-batch"
     before="$(http_get "$DASHBOARD_HOST" /validate | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["ledger"]["duplicates"], d["twin"]["duplicates"], d["twin"]["records"])')"
     info "before: ledger duplicates $(cut -d" " -f1 <<<"$before") · twin duplicates $(cut -d" " -f2 <<<"$before") · twin records $(cut -d" " -f3 <<<"$before")"
     # stop + start: `restart` only re-resolves the spec and keeps a running
     # service instance; a stop ends the consumer session mid-batch.
-    for w in st06-final-test st06-final-test-twin; do
+    for w in fab-st06-final-test fab-st06-final-test-twin; do
       api POST "/v1/workloads/default/$w/stop" >/dev/null
       info "$w stop [$(api_status)]"
     done
     sleep 3
-    for w in st06-final-test st06-final-test-twin; do
+    for w in fab-st06-final-test fab-st06-final-test-twin; do
       api POST "/v1/workloads/default/$w/start" >/dev/null
       info "$w start [$(api_status)]"
     done
     for _ in $(seq 1 30); do
-      [ "$(workload_state st06-final-test)" = running ] && [ "$(workload_state st06-final-test-twin)" = running ] && break
+      [ "$(workload_state fab-st06-final-test)" = running ] && [ "$(workload_state fab-st06-final-test-twin)" = running ] && break
       sleep 2
     done
     info "both running again; the twin replays from its last commit, ST-06 from the offsets its transactions committed — waiting 40 s…"
@@ -105,11 +105,11 @@ for w in d.get("warnings") or []: print("  warning:", w)'
   rollout-st03)
     pct="${1:-12}"
     step "beat 7: rolling update of ST-03 with NSOP_THRESHOLD_PCT=$pct (same consumer.group.id, resumes where it stopped)"
-    sed -E "s/NSOP_THRESHOLD_PCT: \"[0-9.]+\"/NSOP_THRESHOLD_PCT: \"$pct\"/" "$MANIFEST_DIR/st03-wire-bond.workload.yaml" > "$MANIFEST_DIR/st03-wire-bond.rollout.yaml"
-    cosmo_apply "$MANIFEST_DIR/st03-wire-bond.rollout.yaml" >/dev/null; info "applied [$(api_status)]"
-    rm -f "$MANIFEST_DIR/st03-wire-bond.rollout.yaml"
-    for _ in $(seq 1 20); do [ "$(workload_state st03-wire-bond)" = running ] && break; sleep 2; done
-    pass "st03-wire-bond $(workload_state st03-wire-bond) with NSOP threshold $pct% — the dashboard's ST-03 'started' fault row shows the new value; the heat strip never blanks"
+    sed -E "s/NSOP_THRESHOLD_PCT: \"[0-9.]+\"/NSOP_THRESHOLD_PCT: \"$pct\"/" "$MANIFEST_DIR/fab-st03-wire-bond.workload.yaml" > "$MANIFEST_DIR/fab-st03-wire-bond.rollout.yaml"
+    cosmo_apply "$MANIFEST_DIR/fab-st03-wire-bond.rollout.yaml" >/dev/null; info "applied [$(api_status)]"
+    rm -f "$MANIFEST_DIR/fab-st03-wire-bond.rollout.yaml"
+    for _ in $(seq 1 20); do [ "$(workload_state fab-st03-wire-bond)" = running ] && break; sleep 2; done
+    pass "fab-st03-wire-bond $(workload_state fab-st03-wire-bond) with NSOP threshold $pct% — the dashboard's ST-03 'started' fault row shows the new value; the heat strip never blanks"
     ;;
   probe)
     rec='{"f":0,"die":"D-PROBE001","head":"H1","bl_um":25.1,"epoxy_mg":3.2,"dx_um":1.0,"dy_um":-1.0,"theta_deg":0.01,"stage_c":25.4}'

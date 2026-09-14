@@ -1,7 +1,7 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
-  name: "st05-mold-cure"
+  name: "fab-st05-mold-cure"
   namespace: default
 spec:
   replicas: 1

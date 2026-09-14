@@ -1,7 +1,7 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
-  name: "st03-wire-bond"
+  name: "fab-st03-wire-bond"
   namespace: default
 spec:
   replicas: 1

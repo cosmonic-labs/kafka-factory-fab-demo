@@ -1,8 +1,15 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "st04-inspection"
+  name: "fab-st02-die-attach"
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-st02-die-attach
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: st02
 spec:
   hostInterfaces:
     - namespace: cosmonic
@@ -13,18 +20,16 @@ spec:
         bootstrap.servers: 127.0.0.1:9092
         broker.address.family: v4
         # The host subscribes to and dispatches this topic.
-        handler.topics: "inspect.jobs"
+        handler.topics: "dieattach.readings"
         # The GRANT: the subscription, the DLQ, and every produce target.
-        topics: "inspect.jobs,inspect.dlq,inspect.results,line.metrics"
+        topics: "dieattach.readings,dieattach.dlq,dieattach.flags,line.metrics"
         # This stable group resumes offsets across redeploys.
-        handler.group.id: "st04-inspection"
+        handler.group.id: "st02-die-attach"
         auto.offset.reset: earliest
-        dead-letter.topic: "inspect.dlq"
-        # One job per call: a verdict per job (the work-queue shape).
-        handler.batch.size: "1"
+        dead-letter.topic: "dieattach.dlq"
   components:
-    - name: inspector
-      image: oci.localhost:8200/apps/st04-inspection:0.1.0@sha256:31b0607785a420f1aab94944fad5eee50db8238ad37d2e1abf170bd519aa3b00
+    - name: processor
+      image: oci.localhost:8200/apps/fab-st02-die-attach:0.1.0@sha256:92cfa7773cc18e619e301f24837811d430478ed0d25d569e375c5ee8cc3dd4da
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

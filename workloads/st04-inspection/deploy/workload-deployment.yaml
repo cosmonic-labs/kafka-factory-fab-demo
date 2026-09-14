@@ -1,7 +1,7 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
-  name: "st04-inspection"
+  name: "fab-st04-inspection"
   namespace: default
 spec:
   replicas: 1

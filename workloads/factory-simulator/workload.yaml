@@ -1,8 +1,15 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "factory-simulator"
+  name: "fab-factory-simulator"
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-factory-simulator
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: simulator
 spec:
   hostInterfaces:
     - namespace: cosmonic
@@ -22,7 +29,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: simulator
-    image: oci.localhost:8200/apps/factory-simulator:0.1.0
+    image: oci.localhost:8200/apps/fab-factory-simulator:0.1.0
     maxRestarts: 100
     localResources:
       allowedHosts: []
@@ -30,6 +37,6 @@ spec:
   # never invoked (the service above is what runs).
   components:
     - name: simulator
-      image: oci.localhost:8200/apps/factory-simulator:0.1.0
+      image: oci.localhost:8200/apps/fab-factory-simulator:0.1.0
       localResources:
         allowedHosts: []

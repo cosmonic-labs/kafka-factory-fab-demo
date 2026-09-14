@@ -170,3 +170,9 @@ and the scaffold won (PLAN.md §2).
 25. **The repo is `cosmonic-labs/kafka-factory-fab-demo`**, the remote this
     checkout was created with, not the `factory-fab-assembly-line` name the
     brief proposed. Nothing else depends on the name.
+26. **Workload names carry a `fab-` prefix and a `fab-factory` label.** The
+    Desktop Workloads grid searches names and label pills, so `fab-`
+    or `fab-factory` filters the whole line on a host that runs many other
+    workloads. Hostnames follow (`fab-line-dashboard.localhost`,
+    `fab-st01-probe-intake.localhost`); consumer group ids and source
+    directories keep the brief's names.

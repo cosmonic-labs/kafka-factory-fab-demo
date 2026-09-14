@@ -5,8 +5,10 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "st07-refused-grant"
+  name: "fab-st07-refused-grant"
   namespace: default
+  labels:
+    app.kubernetes.io/part-of: fab-factory
 spec:
   hostInterfaces:
     - namespace: cosmonic
@@ -23,6 +25,6 @@ spec:
         dead-letter.topic: "dieattach.dlq"
   components:
     - name: processor
-      image: oci.localhost:8200/apps/st02-die-attach:0.1.0
+      image: oci.localhost:8200/apps/fab-st02-die-attach:0.1.0
       localResources:
         allowedHosts: []

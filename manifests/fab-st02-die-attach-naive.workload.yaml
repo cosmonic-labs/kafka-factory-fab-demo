@@ -1,8 +1,15 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "st02-die-attach"
+  name: "fab-st02-die-attach"  # the naive build (run.sh --naive)
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-st02-die-attach
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: st02
 spec:
   hostInterfaces:
     - namespace: cosmonic
@@ -22,7 +29,7 @@ spec:
         dead-letter.topic: "dieattach.dlq"
   components:
     - name: processor
-      image: oci.localhost:8200/apps/st02-die-attach:0.1.0@sha256:332d72ba0c5d38dc4f1961bb720814aebb15545b049e99090cd6f913029b147a
+      image: oci.localhost:8200/apps/fab-st02-die-attach-naive:0.1.0@sha256:b1c5bb3363ba7cb132053ba724191ee9fc5b7e213d7f81bd7756445ee7c23e99
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

@@ -1,7 +1,7 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
-  name: "st02-die-attach"
+  name: "fab-st02-die-attach"
   namespace: default
 spec:
   replicas: 1

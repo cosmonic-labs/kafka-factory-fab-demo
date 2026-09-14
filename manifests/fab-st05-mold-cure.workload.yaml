@@ -1,8 +1,15 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "st05-mold-cure"
+  name: "fab-st05-mold-cure"
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-st05-mold-cure
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: st05
 spec:
   hostInterfaces:
     - namespace: cosmonic
@@ -26,7 +33,7 @@ spec:
         max.poll.interval.ms: "900000"
   components:
     - name: cure-profile
-      image: oci.localhost:8200/apps/st05-mold-cure:0.1.0@sha256:0d1103021bbd6b2f5998ab96d5e7f9ea137e83d87d3d140a23023df33aa4c5f0
+      image: oci.localhost:8200/apps/fab-st05-mold-cure:0.1.0@sha256:2d570a9d745976761dcf47d0e2445ab58e95ef081db33814d8d75bd803bdee76
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

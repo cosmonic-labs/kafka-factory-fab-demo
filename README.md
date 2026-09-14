@@ -23,7 +23,7 @@ templates, the plugin, the daemon and the skill is in
 | ST-06 Final test | `rust-kafka-transactional` | `finaltest.bins` → `lot.disposition` + `inventory.moves` | exactly-once: outputs + offsets in one transaction; `replicas: 1` |
 | ST-06 twin | `rust-kafka-pull-service` | → `lot.disposition.twin` + `inventory.moves.twin` | the same, at-least-once, so a replay shows duplicates next to the zero |
 | factory-simulator | `rust-kafka-pull-service` shape | `sim.control` → every input topic | plays static scenario frames on a 1-s tick, forever; driven by one Kafka topic |
-| line-dashboard | handler + `wasi:http` | `line.metrics` (+ DLQs, ledgers) → `http://line-dashboard.localhost:8200/` | folds the one instrumentation path into six panels; `/validate` for the scripts |
+| line-dashboard | handler + `wasi:http` | `line.metrics` (+ DLQs, ledgers) → `http://fab-line-dashboard.localhost:8200/` | folds the one instrumentation path into six panels; `/validate` for the scripts |
 
 ## Bring it up
 
@@ -57,8 +57,14 @@ that panics on the poison record, `--no-sim` leaves the loop stopped,
 of the manifests (needs a daemon restart), `--purge` starts from an empty
 broker.
 
-Open **http://line-dashboard.localhost:8200/** — six panels in floor order, a
+Open **http://fab-line-dashboard.localhost:8200/** — six panels in floor order, a
 summary strip, a faults ledger, polling `/api/state` every 2 s.
+
+Every workload is named `fab-<station>` and labeled
+`app.kubernetes.io/part-of: fab-factory` (plus `app.kubernetes.io/name`,
+`app.kubernetes.io/version` and `fab.meridian.example/station`), so in
+Desktop's Workloads grid a search for `fab-` or `fab-factory` shows just the
+line, and `station=st02` finds one station.
 
 ## The demo (about 12 minutes; docs/design.html §5)
 

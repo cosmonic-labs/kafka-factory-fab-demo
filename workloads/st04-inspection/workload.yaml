@@ -1,8 +1,15 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "st04-inspection"
+  name: "fab-st04-inspection"
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-st04-inspection
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: st04
 spec:
   hostInterfaces:
     - namespace: cosmonic
@@ -24,7 +31,7 @@ spec:
         handler.batch.size: "1"
   components:
     - name: inspector
-      image: oci.localhost:8200/apps/st04-inspection:0.1.0
+      image: oci.localhost:8200/apps/fab-st04-inspection:0.1.0
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

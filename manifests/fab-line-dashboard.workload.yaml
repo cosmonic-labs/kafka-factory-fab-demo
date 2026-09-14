@@ -1,9 +1,16 @@
-# Reach it at http://line-dashboard.localhost:8200/
+# Reach it at http://fab-line-dashboard.localhost:8200/
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "line-dashboard"
+  name: "fab-line-dashboard"
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-line-dashboard
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: dashboard
 spec:
   hostInterfaces:
     - namespace: wasi
@@ -11,7 +18,7 @@ spec:
       # This component exports P3 wasi:http/handler@0.3.0 — bind "handler".
       interfaces: [handler]
       config:
-        host: "line-dashboard.localhost"
+        host: "fab-line-dashboard.localhost"
     - namespace: cosmonic
       package: kafka
       version: 0.5.0
@@ -30,7 +37,7 @@ spec:
         isolation.level: read_committed
   components:
     - name: dashboard
-      image: oci.localhost:8200/apps/line-dashboard:0.1.0@sha256:8df91799deb5b515f5a354fb26ebb30f2cdc187cc368daae3e512c8a2a38d581
+      image: oci.localhost:8200/apps/fab-line-dashboard:0.1.0@sha256:cb4440758f86ded4148479c4e107eca63560c3f09711746a68914f930001e648
       # One warm instance serves both the HTTP page and the Kafka handler, so
       # the fold lives in its memory. maxConcurrency must cover every call
       # that can be in flight at once (13 partition loops + HTTP polls): a

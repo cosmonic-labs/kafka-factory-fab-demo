@@ -3,7 +3,7 @@
 # Idempotent; safe to rerun. Every step prints PASS/FAIL with the sentence the
 # failing tool gave.
 #
-#   --naive          swap st02-die-attach for the build that panics on the poison record (beat 4)
+#   --naive          swap fab-st02-die-attach for the build that panics on the poison record (beat 4)
 #   --no-build       apply the committed manifests/ only (no Rust toolchain needed)
 #   --no-sim         do not start the simulator loop at the end
 #   --use-kafka-yaml put the broker in Desktop's kafka.yaml default instead of the manifests (needs a daemon restart)
@@ -169,17 +169,17 @@ fi
 # ------------------------------------------------------------ 7. build + publish
 WORKLOAD_LIST=("${WORKLOADS[@]}")
 if $NAIVE; then
-  WORKLOAD_LIST=("${WORKLOAD_LIST[@]/st02-die-attach/st02-die-attach-naive}")
+  WORKLOAD_LIST=("${WORKLOAD_LIST[@]/fab-st02-die-attach/fab-st02-die-attach-naive}")
 fi
 if ! $NO_BUILD; then
   step "7. build, verify and publish each workload"
   for w in "${WORKLOAD_LIST[@]}"; do
-    dir="$WORKLOAD_DIR/$w"; features=()
-    if [ "$w" = "st02-die-attach-naive" ]; then dir="$WORKLOAD_DIR/st02-die-attach"; features=(--features naive); fi
+    dir="$(workload_dir "$w")"; features=()
+    if [ "$w" = "fab-st02-die-attach-naive" ]; then dir="$(workload_dir fab-st02-die-attach)"; features=(--features naive); fi
     [ -d "$dir" ] || { fail "no workload directory $dir"; failures=$((failures + 1)); continue; }
     out="$(cd "$dir" && cargo build --target wasm32-wasip2 --release ${features[@]+"${features[@]}"} 2>&1)" || { fail "$w: cargo build failed"; printf '%s\n' "$out" | tail -n 25; failures=$((failures + 1)); continue; }
     wasm="$dir/$(awk '/component_path:/ {print $2}' "$dir/.wash/config.yaml")"
-    if [ "$w" = "st02-die-attach-naive" ]; then
+    if [ "$w" = "fab-st02-die-attach-naive" ]; then
       cp "$wasm" "${wasm%.wasm}_naive.wasm"; wasm="${wasm%.wasm}_naive.wasm"
     fi
     lines="$(wasm_tools component wit "$wasm" 2>/dev/null | grep -E 'cosmonic:kafka/(handler|producer|consumer|transaction)@0.5.0' | sed 's/^ *//' | tr '\n' ' ')"
@@ -191,17 +191,17 @@ if ! $NO_BUILD; then
     pass "$w: built ($(du -h "$wasm" | cut -f1 | tr -d ' ')) · $lines"
     # Publish: build-if-needed on the daemon side is skipped (rebuild=false)
     # because the artifact is fresh; the naive build is pushed by hand.
-    if [ "$w" = "st02-die-attach-naive" ]; then
-      wash oci push --insecure "oci.localhost:8200/apps/st02-die-attach-naive:0.1.0" "$wasm" >/dev/null 2>&1 \
+    if [ "$w" = "fab-st02-die-attach-naive" ]; then
+      wash oci push --insecure "oci.localhost:8200/apps/fab-st02-die-attach-naive:0.1.0" "$wasm" >/dev/null 2>&1 \
         || { fail "$w: wash oci push failed"; failures=$((failures + 1)); continue; }
       # The registry answers the manifest's digest in Docker-Content-Digest.
       digest="$(curl -sS -o /dev/null -D - -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
-        "$(ingress_base)/v2/apps/st02-die-attach-naive/manifests/0.1.0" -H 'Host: oci.localhost' 2>/dev/null \
+        "$(ingress_base)/v2/apps/fab-st02-die-attach-naive/manifests/0.1.0" -H 'Host: oci.localhost' 2>/dev/null \
         | awk 'tolower($1)=="docker-content-digest:" {print $2}' | tr -d '\r')"
-      ref="oci.localhost:8200/apps/st02-die-attach-naive:0.1.0${digest:+@$digest}"
-      sed -e "s|image: oci.localhost:8200/apps/st02-die-attach:0.1.0|image: $ref|" \
-          -e 's|name: "st02-die-attach"|name: "st02-die-attach"  # the naive build (run.sh --naive)|' \
-          "$WORKLOAD_DIR/st02-die-attach/workload.yaml" > "$MANIFEST_DIR/st02-die-attach-naive.workload.yaml"
+      ref="oci.localhost:8200/apps/fab-st02-die-attach-naive:0.1.0${digest:+@$digest}"
+      sed -e "s|image: oci.localhost:8200/apps/fab-st02-die-attach:0.1.0|image: $ref|" \
+          -e 's|name: "fab-st02-die-attach"|name: "fab-st02-die-attach"  # the naive build (run.sh --naive)|' \
+          "$(workload_dir fab-st02-die-attach)/workload.yaml" > "$MANIFEST_DIR/fab-st02-die-attach-naive.workload.yaml"
       pass "$w: pushed $ref"
       continue
     fi
@@ -247,16 +247,16 @@ step "9. apply (dashboard, simulator, stations)"
 # starts empty on every (re)start, so its group is reset before the apply —
 # otherwise a rerun counts "produced" from now but "consumed" from the
 # stations' whole history.
-if [ "$(workload_state line-dashboard)" != absent ]; then
-  cosmo_delete line-dashboard >/dev/null
-  for _ in $(seq 1 20); do [ "$(workload_state line-dashboard)" = absent ] && break; sleep 1; done
+if [ "$(workload_state fab-line-dashboard)" != absent ]; then
+  cosmo_delete fab-line-dashboard >/dev/null
+  for _ in $(seq 1 20); do [ "$(workload_state fab-line-dashboard)" = absent ] && break; sleep 1; done
 fi
 for _ in $(seq 1 10); do
   rpk group delete line-dashboard >/dev/null 2>&1 && break
   rpk group describe line-dashboard 2>/dev/null | grep -qE '^MEMBERS\s+0|^STATE\s+(Dead|Empty)' && { rpk group delete line-dashboard >/dev/null 2>&1; break; }
   sleep 1
 done
-info "line-dashboard group reset: the dashboard will fold line.metrics from the beginning"
+info "fab-line-dashboard group reset: the dashboard will fold line.metrics from the beginning"
 for w in "${WORKLOAD_LIST[@]}"; do
   out="$(cosmo_apply "$APPLY_DIR/$w.workload.yaml")"
   if [ "$(api_status)" = "200" ]; then
@@ -267,7 +267,7 @@ for w in "${WORKLOAD_LIST[@]}"; do
   fi
 done
 abort_if_failed
-names=("${WORKLOAD_LIST[@]/st02-die-attach-naive/st02-die-attach}")
+names=("${WORKLOAD_LIST[@]/fab-st02-die-attach-naive/fab-st02-die-attach}")
 info "waiting for every workload to report running…"
 for _ in $(seq 1 40); do
   pending=()
@@ -315,8 +315,9 @@ base="$(ingress_base)"
 port="${base##*:}"
 step "Fab 3 is up"
 cat <<EOF
-  dashboard   http://$DASHBOARD_HOST:$port/          (Fab 3 Line — polls /api/state every 2 s)
-  ST-01       http://$ST01_HOST:$port/lot            (POST a lot JSON; one line per wafer)
+  dashboard   http://$DASHBOARD_HOST:$port/      (Fab 3 Line — polls /api/state every 2 s)
+  ST-01       http://$ST01_HOST:$port/lot        (POST a lot JSON; one line per wafer)
+  on screen   search "fab-" or "fab-factory" in Desktop's Workloads grid (every workload is labeled app.kubernetes.io/part-of=fab-factory)
   validate    make validate                                     (produced == consumed + dlq, lag, duplicates)
   simulator   make start | stop | shift-change | poison | drift | excursion | calm | status
 

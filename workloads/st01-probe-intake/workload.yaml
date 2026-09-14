@@ -1,9 +1,16 @@
-# Reach it at http://st01-probe-intake.localhost:8200/
+# Reach it at http://fab-st01-probe-intake.localhost:8200/
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "st01-probe-intake"
+  name: "fab-st01-probe-intake"
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-st01-probe-intake
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: st01
 spec:
   hostInterfaces:
     - namespace: wasi
@@ -12,7 +19,7 @@ spec:
       # which is also what makes poolSize/maxConcurrency effective.
       interfaces: [handler]
       config:
-        host: "st01-probe-intake.localhost"
+        host: "fab-st01-probe-intake.localhost"
     - namespace: cosmonic
       package: kafka
       version: 0.5.0
@@ -25,7 +32,7 @@ spec:
         topics: "probe.lots,line.metrics"
   components:
     - name: intake
-      image: oci.localhost:8200/apps/st01-probe-intake:0.1.0
+      image: oci.localhost:8200/apps/fab-st01-probe-intake:0.1.0
       poolSize: 4
       localResources:
         allowedHosts: []

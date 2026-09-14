@@ -2,7 +2,7 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
-  name: "st01-probe-intake"
+  name: "fab-st01-probe-intake"
   namespace: default
 spec:
   replicas: 1

@@ -1,7 +1,7 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
-  name: "st06-final-test-twin"
+  name: "fab-st06-final-test-twin"
   namespace: default
 spec:
   replicas: 1

@@ -1,8 +1,15 @@
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: Workload
 metadata:
-  name: "st03-wire-bond"
+  name: "fab-st03-wire-bond"
   namespace: default
+  # Tags: the Workloads grid searches label keys and values, so "fab-factory"
+  # (or "station=st02") filters the line's workloads on screen.
+  labels:
+    app.kubernetes.io/part-of: fab-factory
+    app.kubernetes.io/name: fab-st03-wire-bond
+    app.kubernetes.io/version: "0.1.0"
+    fab.meridian.example/station: st03
 spec:
   hostInterfaces:
     - namespace: cosmonic
@@ -21,7 +28,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: wire-bond
-    image: oci.localhost:8200/apps/st03-wire-bond:0.1.0@sha256:916a6d7121fb104a71283d2c06efd6faf188f69b0598ef13e9187184b5c532f4
+    image: oci.localhost:8200/apps/fab-st03-wire-bond:0.1.0@sha256:f9402917ad24855fc0b8894b4e314ba7bbe164d61e0aa70eb08390afa430c1d5
     maxRestarts: 100
     localResources:
       environment:
@@ -38,6 +45,6 @@ spec:
   # never invoked (the service above is what runs).
   components:
     - name: wire-bond
-      image: oci.localhost:8200/apps/st03-wire-bond:0.1.0@sha256:916a6d7121fb104a71283d2c06efd6faf188f69b0598ef13e9187184b5c532f4
+      image: oci.localhost:8200/apps/fab-st03-wire-bond:0.1.0@sha256:f9402917ad24855fc0b8894b4e314ba7bbe164d61e0aa70eb08390afa430c1d5
       localResources:
         allowedHosts: []
