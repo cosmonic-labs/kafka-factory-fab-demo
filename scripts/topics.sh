@@ -37,12 +37,12 @@ existing="$(rpk topic list 2>/dev/null | awk 'NR>1 {print $1, $2}')"
 created=0
 for entry in "${TOPICS[@]}"; do
   t="${entry% *}"; p="${entry#* }"
-  if ! grep -q "^$t " <<<"$existing"; then
-    if rpk topic create "$t" -p "$p" >/dev/null 2>&1; then
-      created=$((created + 1))
-    else
-      die "could not create topic $t (-p $p)"
-    fi
+  # A case match, not grep <<<: bash 5.x here-strings past 512 bytes hang on macOS.
+  case $'\n'"$existing" in *$'\n'"$t "*) continue ;; esac
+  if rpk topic create "$t" -p "$p" >/dev/null 2>&1; then
+    created=$((created + 1))
+  else
+    die "could not create topic $t (-p $p)"
   fi
 done
 info "topics: $created created, $(( ${#TOPICS[@]} - created )) already present"
@@ -57,7 +57,7 @@ bad=0
 now="$(rpk topic list 2>/dev/null | awk 'NR>1 {print $1, $2}')"
 for entry in "${TOPICS[@]}"; do
   t="${entry% *}"; p="${entry#* }"
-  have="$(awk -v t="$t" '$1==t {print $2}' <<<"$now")"
+  have="$(printf '%s\n' "$now" | awk -v t="$t" '$1==t {print $2}')"
   if [ "$have" = "$p" ]; then
     :
   else
