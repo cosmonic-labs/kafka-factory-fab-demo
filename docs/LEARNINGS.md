@@ -35,6 +35,21 @@ doctor provision `wasm-component-ld >= 0.5.27` and `wasm-tools >= 1.250` and
 say so in the template notes. The skill's "verify with `wasm-tools component
 wit`" step silently needs the newer wasm-tools.
 
+### 1.2b Two manifests per scaffold is one too many
+Every `rust-kafka-*` scaffold ships `workload.yaml` at the root (Desktop's
+flat Workload) *and* `deploy/workload-deployment.yaml` (a Kubernetes
+`WorkloadDeployment` with placeholder image, broker and topics). Two files
+that must agree, one of which is never edited, is a trap: `run.sh` here
+rendered from the root one for hours while the `deploy/` one still said
+`demo.events`. **Change (templates + skill):** ship ONE manifest at
+`deploy/workload.yaml` — the flat Workload Desktop applies, which is the same
+`runtime.wasmcloud.dev/v1alpha1` schema Control accepts — and have the skill
+say "the workload's manifest is `deploy/workload.yaml`; publish renders a
+digest-pinned copy of it". Generate the Kubernetes `WorkloadDeployment`
+wrapper on demand (`cosmonic promote --k8s`) rather than committing a second
+hand-maintained copy. This repo moved every manifest to `deploy/workload.yaml`
+and deleted the `WorkloadDeployment` templates.
+
 ### 1.3 A handler that produces should be the shipped default
 The brief and the skill both say "start with the handler — it can produce",
 but the `rust-kafka-handler-consumer` scaffold ships without the producer
@@ -201,6 +216,8 @@ when the workload starts. **Change:** run the plugin's `validate_bindings` in
 Add, in this order of value:
 1. The `rebalances()` ⇒ manual assignment contract, with the answer loop (2.1).
 2. "`spec.service` for `wasi:cli/run`; `components` are invoked, not run" (1.1).
+2b. One manifest per workload, at `deploy/workload.yaml`; the scaffold's second
+   `deploy/workload-deployment.yaml` template should go (1.2b).
 3. `no-offset` is not an error; the retriable/fatal ladder for `commit` (1.4).
 4. What "no batch timer" means for lag, and the transaction-marker lag (2.4, 2.6).
 5. `maxConcurrency` for a stateful single-instance handler; what "Saturated"

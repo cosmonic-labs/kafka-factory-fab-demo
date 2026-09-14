@@ -176,3 +176,9 @@ and the scaffold won (PLAN.md §2).
     workloads. Hostnames follow (`fab-line-dashboard.localhost`,
     `fab-st01-probe-intake.localhost`); consumer group ids and source
     directories keep the brief's names.
+27. **One manifest per workload, at `deploy/workload.yaml`.** The scaffold
+    ships two — `workload.yaml` (Desktop's flat Workload) at the root and
+    `deploy/workload-deployment.yaml` (a Kubernetes `WorkloadDeployment`
+    with placeholder image/broker/topics). The template one was removed and
+    the real one moved under `deploy/`; `run.sh` and `release.sh` read
+    `deploy/workload.yaml`. `manifests/` holds the digest-pinned renderings.

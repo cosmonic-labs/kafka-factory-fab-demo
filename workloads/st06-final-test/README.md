@@ -8,7 +8,7 @@ pattern over the other three.
 
 This is a Cosmonic Desktop project: `.wash/config.yaml` carries the build
 command and, under `workload.hostInterfaces`, the same `cosmonic:kafka`
-binding as `workload.yaml`. The Builder's agent, `cosmonic dev`, or the
+binding as `deploy/workload.yaml`. The Builder's agent, `cosmonic dev`, or the
 `cosmonic_dev_start` MCP tool builds it (`cargo build --target wasm32-wasip2
 --release`), runs it, and hot-restarts it on every save. `cosmonic publish` /
 `cosmonic_project_publish` then pushes the component to the built-in registry
@@ -57,10 +57,10 @@ registry that serves it, should you need to fetch it again.
 
 ## Deploy
 
-- **Cosmonic Desktop**: submit `workload.yaml` through its workload API or MCP
-  integration.
-- **Kubernetes** (wasmCloud runtime-operator / Cosmonic Control): run
-  `kubectl apply -f deploy/workload-deployment.yaml`.
+- **Cosmonic Desktop**: `deploy/workload.yaml` is the Workload this station
+  runs as — `scripts/run.sh` digest-pins its image and applies it (the
+  Kubernetes `WorkloadDeployment` form the template shipped was removed; the
+  Workload spec is the same schema on Control).
 
 Both point at the component published from this template. Set the broker,
 topic, group, transaction ID, and environment placeholders before applying a

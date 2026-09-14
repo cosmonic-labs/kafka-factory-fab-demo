@@ -79,7 +79,7 @@ json.dump(m, sys.stdout, separators=(",", ":"))' "$SOURCE_URL" "Fab 3 line workl
   fi
   digest="$(digest_of "${REGISTRY#*/}/$w" "$TAG")"
   if [ -z "$digest" ]; then fail "$w: pushed but the registry returned no digest"; failures=$((failures + 1)); continue; fi
-  src="$dir/workload.yaml"
+  src="$dir/deploy/workload.yaml"
   local_image="oci.localhost:8200/apps/${w%-naive}:0.1.0"
   sed -e "s|image: $local_image|image: $ref@$digest|" "$src" > "$MANIFEST_DIR/$w.workload.yaml"
   if [ "$w" = fab-st02-die-attach-naive ]; then

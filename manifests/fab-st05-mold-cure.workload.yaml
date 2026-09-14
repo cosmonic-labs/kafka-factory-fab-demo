@@ -33,7 +33,7 @@ spec:
         max.poll.interval.ms: "900000"
   components:
     - name: cure-profile
-      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st05-mold-cure:0.1.0@sha256:8104c1687717bfc6637b55012f4cabe83b88eff28cc878ffe832eee3edf7174d
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st05-mold-cure:0.1.0@sha256:ac4ce217553b04071eaa457e11996a07f9e083d3f38a4774e412c6467027aea6
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

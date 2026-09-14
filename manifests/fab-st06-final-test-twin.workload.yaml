@@ -28,7 +28,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: final-test-twin
-    image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st06-final-test-twin:0.1.0@sha256:fd44ba2a00b2a78d370796b13ed08ceb9c945fee29ca43dd78aef1d85971c752
+    image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st06-final-test-twin:0.1.0@sha256:0cf296cb1a406056911599704c43ebaf65bc9d4ad36a41d1287acb9becfdb075
     maxRestarts: 100
     localResources:
       environment:
@@ -45,6 +45,6 @@ spec:
   # never invoked (the service above is what runs).
   components:
     - name: final-test-twin
-      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st06-final-test-twin:0.1.0@sha256:fd44ba2a00b2a78d370796b13ed08ceb9c945fee29ca43dd78aef1d85971c752
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st06-final-test-twin:0.1.0@sha256:0cf296cb1a406056911599704c43ebaf65bc9d4ad36a41d1287acb9becfdb075
       localResources:
         allowedHosts: []

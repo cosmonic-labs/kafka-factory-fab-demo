@@ -202,12 +202,12 @@ if ! $NO_BUILD; then
       ref="oci.localhost:8200/apps/fab-st02-die-attach-naive:0.1.0${digest:+@$digest}"
       sed -e "s|image: oci.localhost:8200/apps/fab-st02-die-attach:0.1.0|image: $ref|" \
           -e 's|name: "fab-st02-die-attach"|name: "fab-st02-die-attach"  # the naive build (run.sh --naive)|' \
-          "$(workload_dir fab-st02-die-attach)/workload.yaml" > "$LOCAL_MANIFEST_DIR/fab-st02-die-attach-naive.workload.yaml"
+          "$(workload_dir fab-st02-die-attach)/deploy/workload.yaml" > "$LOCAL_MANIFEST_DIR/fab-st02-die-attach-naive.workload.yaml"
       pass "$w: pushed $ref"
       continue
     fi
     digest="$(cosmo_publish "$dir" "$w:0.1.0" false)" || { fail "$w: publish failed: $digest"; failures=$((failures + 1)); continue; }
-    sed "s|image: oci.localhost:8200/apps/$w:0.1.0|image: oci.localhost:8200/apps/$w:0.1.0@$digest|" "$dir/workload.yaml" > "$LOCAL_MANIFEST_DIR/$w.workload.yaml"
+    sed "s|image: oci.localhost:8200/apps/$w:0.1.0|image: oci.localhost:8200/apps/$w:0.1.0@$digest|" "$dir/deploy/workload.yaml" > "$LOCAL_MANIFEST_DIR/$w.workload.yaml"
     pass "$w: published oci.localhost:8200/apps/$w:0.1.0@${digest:0:19}… → manifests/local/$w.workload.yaml"
   done
   abort_if_failed

@@ -29,7 +29,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: simulator
-    image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-factory-simulator:0.1.0@sha256:f5bd08aada16522dde0115950e4ac28af248d2499956e8da411a4c0aacf7e10b
+    image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-factory-simulator:0.1.0@sha256:97b75ead48405688f6a628ec5f425502ddf95447bf406154e60c62de040d7508
     maxRestarts: 100
     localResources:
       allowedHosts: []
@@ -37,6 +37,6 @@ spec:
   # never invoked (the service above is what runs).
   components:
     - name: simulator
-      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-factory-simulator:0.1.0@sha256:f5bd08aada16522dde0115950e4ac28af248d2499956e8da411a4c0aacf7e10b
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-factory-simulator:0.1.0@sha256:97b75ead48405688f6a628ec5f425502ddf95447bf406154e60c62de040d7508
       localResources:
         allowedHosts: []

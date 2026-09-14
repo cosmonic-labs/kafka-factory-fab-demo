@@ -109,7 +109,8 @@ broker (volume kept); `make purge` removes the volume too.
 ## Layout
 
 ```
-workloads/          one scaffold per workload (cosmonic new rust-kafka-<pattern>), src/lib.rs rewritten
+workloads/          one scaffold per workload (cosmonic new rust-kafka-<pattern>), src/lib.rs rewritten;
+                    deploy/workload.yaml is the station's Workload (the source run.sh digest-pins)
   factory-simulator/data/<scenario>/<topic>.jsonl   the static record sets (generate.py regenerates them)
   line-dashboard/ui/index.html                      the page: docs/design.html §6, live
 manifests/          digest-pinned Workload per station on ghcr.io (what --no-build applies); local/ holds a local build's (gitignored); kafka.yaml.example; refused/
