@@ -1,0 +1,12 @@
+# Cosmonic Desktop's optional Kafka default (`PUT /v1/kafka`, or Settings →
+# Built-in plugins → Kafka), the "platform team sets the broker once" route:
+# a base every cosmonic:kafka binding inherits key by key, so the station
+# manifests can omit bootstrap.servers. Read once at daemon boot — a restart
+# is needed after writing it. scripts/run.sh --use-kafka-yaml writes it.
+#
+# Never a credential VALUE here: the local Redpanda runs without SASL; with
+# SASL, register the password as a Desktop secret ref named SASL_PASSWORD and
+# name the ref under secret_from (it arrives as sasl.password).
+config:
+  bootstrap.servers: 127.0.0.1:9092
+  broker.address.family: v4

@@ -1,0 +1,785 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Meridian Line Story</title></head><body><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F2F4F1;
+    --surface: #FAFBF9;
+    --surface-2: #E7EBE7;
+    --line: #CBD2CC;
+    --line-strong: #9AA59D;
+    --ink: #1B2320;
+    --ink-2: #4B5651;
+    --ink-3: #75817A;
+    --accent: #1E6A85;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #D9E8EE;
+    --copper: #B8862B;
+    --copper-soft: #F1E6CC;
+    --good: #2A7A4B;
+    --good-soft: #D8EBDF;
+    --warn: #C6801A;
+    --warn-soft: #F5E6CC;
+    --crit: #B23A2C;
+    --crit-soft: #F3D9D5;
+    --code-bg: #E9EDE9;
+    --shadow: 0 1px 2px rgba(27,35,32,.08);
+    --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #131A1B; --surface: #1A2224; --surface-2: #222C2E;
+      --line: #2F3B3D; --line-strong: #4C5B5E;
+      --ink: #E6EBE8; --ink-2: #B5BFBA; --ink-3: #8B9791;
+      --accent: #5FB2D3; --accent-ink: #0E1A20; --accent-soft: #1B3540;
+      --copper: #D6A94A; --copper-soft: #3A3016;
+      --good: #63C48A; --good-soft: #1B3527;
+      --warn: #E4A63B; --warn-soft: #3C2E12;
+      --crit: #E9705F; --crit-soft: #401F1B;
+      --code-bg: #0F1516;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #131A1B; --surface: #1A2224; --surface-2: #222C2E;
+    --line: #2F3B3D; --line-strong: #4C5B5E;
+    --ink: #E6EBE8; --ink-2: #B5BFBA; --ink-3: #8B9791;
+    --accent: #5FB2D3; --accent-ink: #0E1A20; --accent-soft: #1B3540;
+    --copper: #D6A94A; --copper-soft: #3A3016;
+    --good: #63C48A; --good-soft: #1B3527;
+    --warn: #E4A63B; --warn-soft: #3C2E12;
+    --crit: #E9705F; --crit-soft: #401F1B;
+    --code-bg: #0F1516;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--body); font-size: 16px; line-height: 1.55;
+    padding-block: 0 96px; padding-inline: clamp(16px, 4vw, 48px);
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  .prose { max-width: 70ch; }
+  h1, h2, h3, h4 { font-family: var(--display); text-wrap: balance; line-height: 1.1; margin: 0; }
+  h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 700; letter-spacing: -.01em; }
+  h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); font-weight: 600; margin-top: 72px; margin-bottom: 8px; }
+  h3 { font-size: 1.25rem; font-weight: 600; margin-top: 36px; margin-bottom: 8px; }
+  h4 { font-size: 1rem; font-weight: 600; margin-top: 20px; margin-bottom: 4px; }
+  p { margin: 0 0 14px; }
+  a { color: var(--accent); }
+  strong { font-weight: 600; }
+  code, pre { font-family: var(--mono); font-size: .86em; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); padding: 14px 16px; overflow-x: auto; line-height: 1.5; border-radius: 4px; margin: 12px 0 18px; }
+  pre code { background: none; padding: 0; }
+  .eyebrow { font-family: var(--mono); font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+  .lede { font-size: 1.15rem; color: var(--ink-2); max-width: 62ch; }
+  .note { border-left: 3px solid var(--copper); background: var(--copper-soft); padding: 10px 14px; margin: 16px 0; border-radius: 0 4px 4px 0; max-width: 70ch; }
+  .note.proposed { border-color: var(--accent); background: var(--accent-soft); }
+  ul, ol { padding-left: 1.3em; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+
+  /* Masthead */
+  .mast { padding-block: 56px 28px; border-bottom: 1px solid var(--line); margin-bottom: 36px; display: grid; gap: 14px; }
+  .mast .meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--mono); font-size: .8rem; color: var(--ink-3); }
+
+  /* Line map */
+  .linemap { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; margin: 28px 0 10px; position: relative; }
+  .linemap::before { content:""; position:absolute; left: 6%; right: 6%; top: 46px; height: 2px; background: var(--line-strong); z-index: 0; }
+  .stage { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 12px 12px; position: relative; z-index: 1; box-shadow: var(--shadow); display: grid; gap: 6px; justify-items: center; text-align: center; }
+  .stage .num { font-family: var(--mono); font-size: .72rem; color: var(--ink-3); letter-spacing: .1em; }
+  .stage svg { width: 56px; height: 56px; display:block; }
+  .stage .name { font-family: var(--display); font-weight: 600; font-size: 1.02rem; line-height: 1.1; }
+  .stage .tpl { font-family: var(--mono); font-size: .68rem; color: var(--accent); word-break: break-word; }
+  .stage .tpl.new { color: var(--copper); }
+  @media (max-width: 760px) { .linemap { grid-template-columns: repeat(3, minmax(0,1fr)); } .linemap::before { display:none; } }
+  @media (max-width: 420px) { .linemap { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+
+  /* Sensor legend */
+  .sensors { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; margin: 16px 0 8px; }
+  .sensor { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+  .sensor svg { width: 44px; height: 44px; }
+  .sensor .sn { font-size: .86rem; font-weight: 500; line-height: 1.2; }
+  .sensor .su { font-family: var(--mono); font-size: .68rem; color: var(--ink-3); }
+
+  /* Tables */
+  .tablewrap { overflow-x: auto; margin: 14px 0 22px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); background: var(--surface-2); font-weight: 500; }
+  tr:last-child td { border-bottom: none; }
+  td code { white-space: normal; overflow-wrap: anywhere; }
+  td { max-width: 46ch; min-width: 12ch; }
+  .num { font-variant-numeric: tabular-nums; }
+  .pill { display:inline-block; font-family: var(--mono); font-size: .7rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-2); white-space: nowrap; }
+  .pill.new { border-color: var(--copper); color: var(--copper); }
+  .pill.ok { border-color: var(--good); color: var(--good); }
+  .pill.eo { border-color: var(--accent); color: var(--accent); }
+
+  /* Beats */
+  .beats { display: grid; gap: 10px; counter-reset: beat; margin: 14px 0 20px; }
+  .beat { display: grid; grid-template-columns: 44px 1fr; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+  .beat .t { font-family: var(--mono); font-size: .78rem; color: var(--ink-3); padding-top: 3px; }
+  .beat h4 { margin: 0 0 3px; }
+  .beat p { margin: 0; font-size: .93rem; color: var(--ink-2); }
+
+  /* Dashboard wireframe */
+  .dash { background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 8px; padding: 12px; margin: 18px 0 8px; display: grid; gap: 10px; font-family: var(--mono); }
+  .dash .bar { display:flex; justify-content: space-between; align-items:center; font-size: .72rem; color: var(--ink-3); padding: 2px 4px; }
+  .kpis { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 8px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; display:grid; gap: 2px; }
+  .kpi .l { font-size: .64rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  .kpi .v { font-family: var(--display); font-size: 1.35rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi .d { font-size: .66rem; color: var(--ink-3); }
+  .kpi .d.good { color: var(--good); } .kpi .d.warn { color: var(--warn); } .kpi .d.crit { color: var(--crit); }
+  .panels { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 10px; display:grid; gap: 8px; align-content: start; min-height: 190px; border-top: 3px solid var(--accent); }
+  .panel.new { border-top-color: var(--copper); }
+  .panel .ph { display:flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .panel .ph b { font-family: var(--display); font-size: .95rem; font-weight: 600; }
+  .panel .ph span { font-size: .62rem; color: var(--ink-3); }
+  .panel .rows { display:grid; gap: 4px; font-size: .7rem; color: var(--ink-2); }
+  .panel .rows div { display:flex; justify-content: space-between; gap: 8px; }
+  .panel .rows div em { font-style: normal; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .panel svg { width: 100%; height: 64px; display:block; }
+  .panel .fault { font-size: .66rem; padding: 3px 7px; border-radius: 3px; background: var(--warn-soft); color: var(--warn); }
+  .panel .fault.c { background: var(--crit-soft); color: var(--crit); }
+  .panel .fault.g { background: var(--good-soft); color: var(--good); }
+  .dash .ledger { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 10px; font-size: .7rem; display:grid; gap: 4px; }
+  .dash .ledger div { display:grid; grid-template-columns: 64px 130px 1fr 130px; gap: 8px; }
+  .dash .ledger .h { color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; font-size: .62rem; }
+  .scalebar { display:grid; gap: 3px; }
+  .scalebar .track { position: relative; height: 12px; background: var(--surface-2); border-radius: 999px; border: 1px solid var(--line); }
+  .scalebar .window { position:absolute; top:-1px; height: 12px; border-radius: 999px; background: var(--copper-soft); border: 1px solid var(--copper); }
+  .scalebar .now { position:absolute; top:-4px; width: 4px; height: 18px; background: var(--copper); border-radius: 2px; }
+  .scalebar .lbl { display:flex; justify-content: space-between; font-size: .62rem; color: var(--ink-3); }
+  @media (max-width: 860px) { .kpis { grid-template-columns: repeat(3, minmax(0,1fr)); } .panels { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 520px) { .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); } .panels { grid-template-columns: 1fr; } .dash .ledger div { grid-template-columns: 56px 1fr; } .dash .ledger div span:nth-child(3), .dash .ledger div span:nth-child(4){ grid-column: 1 / -1; } }
+
+  .secdesc { display: grid; gap: 14px; margin-top: 14px; }
+  .secdesc .s { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--surface); padding: 12px 16px; border-radius: 0 6px 6px 0; }
+  .secdesc .s.new { border-left-color: var(--copper); }
+  .secdesc h4 { margin-top: 0; }
+  .secdesc p { margin-bottom: 6px; font-size: .95rem; }
+  .secdesc .kv { font-size: .9rem; color: var(--ink-2); }
+  .secdesc .kv b { color: var(--ink); font-weight: 600; }
+  .toc { display:flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--mono); font-size: .78rem; margin-top: 8px; }
+  .toc a { text-decoration: none; }
+  .toc a:hover, .toc a:focus-visible { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) { .stage { transition: transform .15s ease; } .stage:hover { transform: translateY(-2px); } }
+</style>
+
+<!-- SVG symbol library: sensor icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ic-temp" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><rect x="20" y="8" width="8" height="22" rx="4" fill="none" stroke="var(--ink-2)" stroke-width="2"/><circle cx="24" cy="34" r="6" fill="var(--crit)"/><rect x="22.5" y="18" width="3" height="14" fill="var(--crit)"/><path d="M31 14h5M31 20h5M31 26h5" stroke="var(--ink-3)" stroke-width="1.5"/></symbol>
+    <symbol id="ic-vib" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><path d="M6 24h6l4-12 6 24 6-18 4 10 4-4h6" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="ic-press" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><path d="M10 32a14 14 0 0 1 28 0" fill="none" stroke="var(--ink-2)" stroke-width="2"/><path d="M24 32L31 19" stroke="var(--copper)" stroke-width="2.4" stroke-linecap="round"/><circle cx="24" cy="32" r="2.5" fill="var(--copper)"/><path d="M12 30h2M34 30h2M17 21l1.5 1.5M31 21l-1.5 1.5" stroke="var(--ink-3)" stroke-width="1.5"/></symbol>
+    <symbol id="ic-cam" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><rect x="8" y="15" width="32" height="22" rx="3" fill="none" stroke="var(--ink-2)" stroke-width="2"/><rect x="18" y="10" width="12" height="5" rx="1.5" fill="var(--ink-2)"/><circle cx="24" cy="26" r="7" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="24" cy="26" r="3" fill="var(--accent)"/></symbol>
+    <symbol id="ic-load" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><rect x="10" y="30" width="28" height="8" rx="2" fill="var(--ink-2)"/><rect x="18" y="20" width="12" height="10" rx="1" fill="none" stroke="var(--ink-2)" stroke-width="2"/><path d="M24 20v-8M20 12h8" stroke="var(--copper)" stroke-width="2.2" stroke-linecap="round"/><path d="M14 34h20" stroke="var(--surface)" stroke-width="1.5"/></symbol>
+    <symbol id="ic-ultra" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><rect x="8" y="20" width="10" height="8" rx="1.5" fill="var(--ink-2)"/><path d="M22 18a8 8 0 0 1 0 12M27 14a14 14 0 0 1 0 20M32 10a20 20 0 0 1 0 28" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="ic-hum" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><path d="M24 8c6 9 11 14 11 21a11 11 0 0 1-22 0c0-7 5-12 11-21z" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M19 29a5 5 0 0 0 5 5" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="ic-part" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><rect x="9" y="12" width="30" height="24" rx="3" fill="none" stroke="var(--ink-2)" stroke-width="2"/><circle cx="17" cy="20" r="1.8" fill="var(--warn)"/><circle cx="27" cy="17" r="1.4" fill="var(--warn)"/><circle cx="32" cy="27" r="2" fill="var(--warn)"/><circle cx="21" cy="30" r="1.5" fill="var(--warn)"/><circle cx="26" cy="24" r="1.2" fill="var(--warn)"/></symbol>
+    <symbol id="ic-scan" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><path d="M10 14v20M15 14v20M19 14v20M26 14v20M30 14v20M35 14v20M38 14v20" stroke="var(--ink-2)" stroke-width="2"/><path d="M7 24h34" stroke="var(--crit)" stroke-width="1.6"/></symbol>
+    <symbol id="ic-laser" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><rect x="18" y="8" width="12" height="10" rx="2" fill="var(--ink-2)"/><path d="M24 18v16" stroke="var(--crit)" stroke-width="2" stroke-dasharray="3 2"/><rect x="10" y="34" width="28" height="5" rx="1" fill="var(--ink-2)"/><path d="M28 22h5M28 28h5" stroke="var(--ink-3)" stroke-width="1.5"/></symbol>
+    <symbol id="ic-xray" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><rect x="12" y="10" width="24" height="28" rx="2" fill="var(--ink)"/><rect x="18" y="18" width="12" height="12" rx="1" fill="none" stroke="var(--surface)" stroke-width="1.5"/><circle cx="22" cy="22" r="1.8" fill="var(--warn)"/><circle cx="27" cy="26" r="1.4" fill="var(--warn)"/><path d="M14 13h4M30 35h4" stroke="var(--surface)" stroke-width="1.5"/></symbol>
+    <symbol id="ic-ate" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><rect x="10" y="14" width="28" height="18" rx="2" fill="none" stroke="var(--ink-2)" stroke-width="2"/><path d="M14 27l4-6 4 4 4-8 4 6 4-2" fill="none" stroke="var(--good)" stroke-width="2" stroke-linejoin="round"/><path d="M16 36h16" stroke="var(--ink-3)" stroke-width="2"/></symbol>
+    <symbol id="ic-ohm" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="var(--surface-2)"/><path d="M12 34h8l-4-4a10 10 0 1 1 16 0l-4 4h8" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <!-- stage icons -->
+    <symbol id="st-probe" viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><path d="M14 26h36M14 32h36M14 38h36M26 12v40M32 10v44M38 12v40" stroke="var(--accent)" stroke-width="1" opacity=".7"/><path d="M46 8l8 8-6 6-8-8z" fill="var(--copper)"/></symbol>
+    <symbol id="st-die" viewBox="0 0 64 64"><rect x="10" y="38" width="44" height="12" rx="2" fill="var(--surface-2)" stroke="var(--ink-2)" stroke-width="2"/><rect x="24" y="28" width="16" height="10" fill="var(--accent)"/><path d="M32 8v16" stroke="var(--ink-2)" stroke-width="2"/><path d="M26 24h12l-2 4H28z" fill="var(--ink-2)"/><ellipse cx="32" cy="38" rx="10" ry="2" fill="var(--copper)"/></symbol>
+    <symbol id="st-bond" viewBox="0 0 64 64"><rect x="10" y="40" width="44" height="10" rx="2" fill="var(--surface-2)" stroke="var(--ink-2)" stroke-width="2"/><rect x="24" y="32" width="16" height="8" fill="var(--accent)"/><path d="M26 32c0-14 14-14 20 8" fill="none" stroke="var(--copper)" stroke-width="2.4"/><path d="M28 32c0-9 8-10 12 4" fill="none" stroke="var(--copper)" stroke-width="2"/><path d="M20 8v12" stroke="var(--ink-2)" stroke-width="2"/><path d="M17 20h6l-3 6z" fill="var(--ink-2)"/></symbol>
+    <symbol id="st-aoi" viewBox="0 0 64 64"><rect x="12" y="36" width="40" height="14" rx="2" fill="var(--surface-2)" stroke="var(--ink-2)" stroke-width="2"/><rect x="24" y="14" width="16" height="10" rx="2" fill="var(--ink-2)"/><path d="M26 24l-6 12h24l-6-12z" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/><circle cx="32" cy="42" r="2.5" fill="var(--warn)"/></symbol>
+    <symbol id="st-mold" viewBox="0 0 64 64"><rect x="12" y="12" width="40" height="40" rx="3" fill="none" stroke="var(--ink-2)" stroke-width="2"/><rect x="18" y="18" width="28" height="28" rx="2" fill="var(--crit-soft)"/><path d="M26 24c-3 5 3 6 0 12M32 24c-3 5 3 6 0 12M38 24c-3 5 3 6 0 12" fill="none" stroke="var(--crit)" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="st-test" viewBox="0 0 64 64"><rect x="10" y="14" width="44" height="30" rx="3" fill="none" stroke="var(--ink-2)" stroke-width="2"/><path d="M16 34l6-8 6 4 6-12 6 8 6-4" fill="none" stroke="var(--good)" stroke-width="2.2" stroke-linejoin="round"/><rect x="24" y="48" width="16" height="6" rx="1" fill="var(--ink-2)"/><path d="M32 44v4" stroke="var(--ink-2)" stroke-width="2"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="eyebrow">Cosmonic Control · Kafka golden templates · demo story</div>
+    <h1>Meridian Semiconductor, Fab 3 back-end line</h1>
+    <p class="lede">One assembly-and-test line, six stations, six Kafka workload patterns on Cosmonic — and a dashboard with one section per station. The four <code>rust-kafka-*</code> templates Cosmonic Desktop ships plus two proposed elastic handler variants.</p>
+    <div class="meta"><span>Design doc v3 · 14 Sep 2026</span><span>Fictional company and line; every sensor value is synthetic</span><span>cosmonic:kafka@0.5.0 · wasmCloud 2.9 · Control 0.11 / Desktop</span><span>skill cosmonic-kafka 1.2.0 · templates @ f5326286</span></div>
+    <nav class="toc" aria-label="Sections">
+      <a href="#story">1 · Narrative</a><a href="#line">2 · The line</a><a href="#table">3 · Alignment table</a><a href="#elastic">4 · Elastic templates</a><a href="#demo">5 · Technical demo</a><a href="#dash">6 · Dashboard</a><a href="#readme">7 · Skill &amp; template recap</a><a href="#delta">8 · What changed</a><a href="#repo">9 · Repository</a>
+    </nav>
+  </header>
+
+  <!-- 1 NARRATIVE -->
+  <section id="story" class="prose">
+    <div class="eyebrow">1 · Narrative</div>
+    <h2>The story</h2>
+    <p>Meridian Semiconductor makes analog power-management ICs — the small chips that regulate voltage inside cars, factory drives, and phone chargers. Fab 3 in Red Rock, Arizona is its back-end line: wafers arrive from the front-end fab already probed, get sawn into die, attached to lead frames, wire-bonded, inspected, molded in epoxy, tested, and shipped in reels. It runs three shifts, 24/7, and every station on the line talks to a Redpanda cluster.</p>
+    <p>Until last year the data side of the line was a collection of Spark jobs, a fleet of long-running containers, and a per-station Python script nobody wanted to touch. Four things kept paging the on-call engineer. At 06:00 and 14:00 shift changes, every prober on the floor uploads its lot summaries at once and the consumers fell over. A single malformed STDF record from a mis-calibrated prober could stall a partition for hours. When a broker restarted mid-batch, the final-test service occasionally dispositioned a lot twice, and Tape &amp; Reel shipped against a phantom inventory count. And the X-ray inspection backlog after a wire-bond excursion took most of a shift to drain, because the inspection service was sized for a quiet Tuesday.</p>
+    <p>The platform team rebuilt the line's data path on Cosmonic. Each station is now one small Rust component, compiled to a WebAssembly component and built from one of the <code>rust-kafka-*</code> golden templates. The component never links librdkafka and never sees a broker address: the host's Kafka plugin owns every client, and the workload's binding grants the broker, the credential, the consumer group and the exact topics it may touch. The team put the broker and SASL credential in the host's <code>kafka.yaml</code> once; station manifests name only their topics and their group. A component cannot point itself at another cluster, cannot read a topic it wasn't granted, and cannot load native code on the host. Stations that do per-record work use the handler pattern — the host owns offsets, retries and the dead-letter topic, the guest instances scale with assigned partition work and return to zero between batches, and a handler can produce, so die attach publishes its out-of-spec flags without a second workload. Wire bond, which needs to seek and pause per bonder, runs as a pull service with its own commit policy. Lot disposition runs transactionally, so a replayed batch can never double-count inventory. And the two stations whose load is spiky — inspection jobs and mold-oven telemetry — run on two proposed elastic handler variants that add what the handler alone does not: growing and shrinking the replica count, and so the group membership, between a floor and a ceiling.</p>
+    <p>The line supervisor watches one dashboard. It reads left to right in the same order the product moves down the floor, one section per station, with the summary numbers, the live faults, and — for the elastic stations — the replica window drawn as a slider between min and max.</p>
+  </section>
+
+  <!-- 2 THE LINE -->
+  <section id="line">
+    <div class="eyebrow">2 · The line</div>
+    <h2>Six stations, six templates</h2>
+    <p class="prose">Product flows left to right. Each station is one Cosmonic workload built from one template (ids as <code>cosmonic_template_list</code> reports them). Copper labels mark the two proposed elastic handler variants that are not shipped today.</p>
+
+    <div class="linemap" role="list">
+      <div class="stage" role="listitem"><div class="num">ST-01</div><svg><use href="#st-probe"/></svg><div class="name">Wafer probe intake</div><div class="tpl">rust-kafka-http-producer</div></div>
+      <div class="stage" role="listitem"><div class="num">ST-02</div><svg><use href="#st-die"/></svg><div class="name">Die attach</div><div class="tpl">rust-kafka-handler-consumer + producer</div></div>
+      <div class="stage" role="listitem"><div class="num">ST-03</div><svg><use href="#st-bond"/></svg><div class="name">Wire bond</div><div class="tpl">rust-kafka-pull-service</div></div>
+      <div class="stage" role="listitem"><div class="num">ST-04</div><svg><use href="#st-aoi"/></svg><div class="name">AOI &amp; X-ray inspection</div><div class="tpl new">handler-export-work-queue</div></div>
+      <div class="stage" role="listitem"><div class="num">ST-05</div><svg><use href="#st-mold"/></svg><div class="name">Mold &amp; cure</div><div class="tpl new">handler-export-stream-processor</div></div>
+      <div class="stage" role="listitem"><div class="num">ST-06</div><svg><use href="#st-test"/></svg><div class="name">Final test &amp; disposition</div><div class="tpl">rust-kafka-transactional</div></div>
+    </div>
+
+    <h3>Sensor types on the line</h3>
+    <p class="prose">These are the instruments the synthetic generators imitate. Each dashboard section uses the same icon for its sensors so a supervisor can read the signal source at a glance.</p>
+    <div class="sensors">
+      <div class="sensor"><svg><use href="#ic-scan"/></svg><div><div class="sn">Lot / wafer barcode</div><div class="su">lot id, wafer #</div></div></div>
+      <div class="sensor"><svg><use href="#ic-ohm"/></svg><div><div class="sn">Probe-card contact R</div><div class="su">mΩ</div></div></div>
+      <div class="sensor"><svg><use href="#ic-temp"/></svg><div><div class="sn">Chuck / stage temp</div><div class="su">°C</div></div></div>
+      <div class="sensor"><svg><use href="#ic-load"/></svg><div><div class="sn">Epoxy dispense load cell</div><div class="su">mg</div></div></div>
+      <div class="sensor"><svg><use href="#ic-laser"/></svg><div><div class="sn">Bond-line thickness</div><div class="su">µm, laser displacement</div></div></div>
+      <div class="sensor"><svg><use href="#ic-cam"/></svg><div><div class="sn">Placement vision</div><div class="su">Δx Δy µm, θ°</div></div></div>
+      <div class="sensor"><svg><use href="#ic-ultra"/></svg><div><div class="sn">Ultrasonic transducer</div><div class="su">W, kHz</div></div></div>
+      <div class="sensor"><svg><use href="#ic-press"/></svg><div><div class="sn">Bond force / mold pressure</div><div class="su">gf · MPa</div></div></div>
+      <div class="sensor"><svg><use href="#ic-xray"/></svg><div><div class="sn">2D X-ray (voids)</div><div class="su">image + void %</div></div></div>
+      <div class="sensor"><svg><use href="#ic-hum"/></svg><div><div class="sn">Humidity</div><div class="su">% RH</div></div></div>
+      <div class="sensor"><svg><use href="#ic-part"/></svg><div><div class="sn">Particle counter</div><div class="su">≥0.5 µm / ft³</div></div></div>
+      <div class="sensor"><svg><use href="#ic-vib"/></svg><div><div class="sn">Vibration (spindle, press)</div><div class="su">g, 0–10 kHz</div></div></div>
+      <div class="sensor"><svg><use href="#ic-ate"/></svg><div><div class="sn">ATE handler bins</div><div class="su">bin 1–16, Vout, Iq</div></div></div>
+    </div>
+  </section>
+
+  <!-- 3 TABLE -->
+  <section id="table">
+    <div class="eyebrow">3 · Alignment table</div>
+    <h2>Station → sensors → topic → template → dashboard</h2>
+    <p class="prose">This is the structure everything else hangs off: the generators, the workload manifests, and the dashboard sections are each one row of this table.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Station</th><th>Sensors (rate)</th><th>Topics</th><th>Template</th><th>Guarantee</th><th>Why this pattern here</th><th>Dashboard section shows</th><th>Faults we inject</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>ST-01 Wafer probe intake</b></td>
+            <td>Barcode, probe-card contact R, chuck temp. Probers upload STDF lot summaries over HTTP — 40 lots/hr baseline, 100× at shift change</td>
+            <td><code>probe.lots</code> (6 p)</td>
+            <td><span class="pill">rust-kafka-http-producer</span></td>
+            <td>broker ack per record (<code>acks</code> configurable); per-record outcomes in a batch</td>
+            <td>Work starts from an HTTP request. <code>wasi:http/handler@0.3.0</code> in, <code>producer::send_batch</code> on the binding's host-owned client out — one lot upload = one batch of wafer records, so a per-record error (<code>message-size-too-large</code>) is one line in the response, not a failed lot. No client per request; the code never sees a broker address.</td>
+            <td>Lots received/hr, wafers per lot, upload→ack latency p95, batch size, per-record errors in batches, rejected uploads</td>
+            <td>Shift-change burst; schema-invalid STDF (rejected at the edge with 4xx, never produced); one oversized wafer record inside a good batch</td>
+          </tr>
+          <tr>
+            <td><b>ST-02 Die attach</b></td>
+            <td>Epoxy load cell (mg), bond-line thickness (µm), placement vision (Δx/Δy/θ), stage temp — 1 record per die, ~300/s</td>
+            <td><code>dieattach.readings</code> (6 p) → <code>dieattach.flags</code> (3 p); DLQ <code>dieattach.dlq</code>; sink ClickHouse</td>
+            <td><span class="pill">rust-kafka-handler-consumer</span> <span class="pill">+ producer</span></td>
+            <td>at-least-once; DLQ on <code>Permanent</code></td>
+            <td>The default: per-record validation with no session control. The host pushes a partition-ordered batch to <code>handle</code>, owns the group, offsets, retries and DLQ; the component checks spec limits, inserts into ClickHouse (idempotent on die id) and <code>producer::send</code>s an out-of-spec flag — the host reuses one binding-scoped producer across instances. Instances scale with partition work and return to zero (<code>reclaimMinInstances: 0</code>).</td>
+            <td>Readings/s, in-spec %, Cpk per head, live instances 0–32, DLQ count, redeliveries, <code>Ok(Some(offset))</code> partial-batch resumes</td>
+            <td>Poison pill (NaN thickness) → <code>Permanent</code> → DLQ with origin headers, partition advances; a handler that panics instead → five traps then DLQ (shown side by side); slow ClickHouse → <code>max.poll.interval.ms</code> deadline</td>
+          </tr>
+          <tr>
+            <td><b>ST-03 Wire bond</b></td>
+            <td>Ultrasonic power/frequency, bond force (gf), capillary temp — 40 bonders × ~50 bonds/s ≈ 2,000 rec/s</td>
+            <td><code>wirebond.raw</code> (12 p) → <code>wirebond.metrics</code> (6 p)</td>
+            <td><span class="pill">rust-kafka-pull-service</span></td>
+            <td>at-least-once; own DLQ routing (<code>x-dlq-reason</code>)</td>
+            <td>The code needs the consumer <em>session</em>, which is the only reason to leave the handler: 5-second windows per bonder committed explicitly after the window's outputs are acked, <code>rebalances()</code> read so a revoked partition flushes its window, <code>seek</code> to replay a bonder's last 60 s when an NSOP alarm fires, <code>pause</code> on a bonder taken offline. One <code>Consumer::open()</code> per instance, the binding's producer, <code>BATCH_SIZE</code> from env.</td>
+            <td>Bonds/s, per-bonder heat strip (40 cells), NSOP rate, window flush interval, consumer lag, <code>BATCH_SIZE</code>, rebalance events</td>
+            <td>One bonder drifts (transducer power sag) → NSOP alarm → replay by <code>seek</code>; broker restart → silent gap then automatic recovery, lag climbs then drains, no lost windows</td>
+          </tr>
+          <tr>
+            <td><b>ST-04 AOI &amp; X-ray inspection</b></td>
+            <td>2D AOI camera, X-ray void images — one job per strip, image URI + metadata, 200–400 ms of work each; 30/min baseline, 20× after a bond excursion</td>
+            <td><code>inspect.jobs</code> (12 p) → <code>inspect.results</code> (6 p)</td>
+            <td><span class="pill new">handler-export-work-queue</span> <span class="pill">replicas 1→12</span></td>
+            <td>at-least-once; job-level verdict (<code>handler.batch.size: 1</code>); DLQ</td>
+            <td>A handler (exports <code>handler</code>, imports <code>producer</code> for results) whose instances already scale 0→32 inside one replica — but a replica's useful concurrency is capped by its assigned partitions, so a 20× burst on 12 partitions needs more group members. The variant adds a <code>scaling</code> block that moves <code>replicas</code> on consumer lag between 1 and 12 (= partitions). Cooperative-sticky rebalancing keeps scale-in cheap.</td>
+            <td>Queue depth (lag), <b>replica window min/max with current position</b>, live instances per replica, job latency p50/p95, defect classes Pareto, scale-event timeline</td>
+            <td>Backlog burst → replicas 1→12 → drain → back to 1 after cooldown; a job that panics → transient, redelivered alone, five traps → DLQ</td>
+          </tr>
+          <tr>
+            <td><b>ST-05 Mold &amp; cure</b></td>
+            <td>Transfer-mold pressure (MPa), 8 oven zone temps, humidity, particle counter, press vibration — continuous, ~50k samples/s across 6 presses</td>
+            <td><code>mold.telemetry</code> (8 p) → <code>mold.profile</code> (4 p)</td>
+            <td><span class="pill new">handler-export-stream-processor</span> <span class="pill">replicas 2→8</span></td>
+            <td>at-least-once; windows flushed on revoke</td>
+            <td>A continuous stream with windowed state (cure-profile conformance per press) — exactly what the shipped handler cannot hold, since calls land on different instances and idle ones are reclaimed. The variant exports a per-partition <code>stream</code> handler with <code>flush()</code> on revoke, and scales <code>replicas</code> on ingest rate per replica between 2 and 8 (= partitions).</td>
+            <td>Live 8-zone temp strip, profile conformance %, drift alarms, <b>replica window 2→8</b>, rec/s per replica, window flushes on rebalance</td>
+            <td>Shift-change surge → scale 2→6→2; zone 5 thermocouple drifts → conformance alarm; humidity spike → hold flag</td>
+          </tr>
+          <tr>
+            <td><b>ST-06 Final test &amp; disposition</b></td>
+            <td>ATE handler bin results (bin 1–16, Vout, Iq), tester temp, socket contact count — 1 record per unit, ~120/s</td>
+            <td><code>finaltest.bins</code> (6 p) → <code>lot.disposition</code> (3 p) + <code>inventory.moves</code> (3 p)</td>
+            <td><span class="pill">rust-kafka-transactional</span> <span class="pill">replicas: 1</span></td>
+            <td><span class="pill eo">exactly-once</span> read-process-write</td>
+            <td>Inventory. Two bindings on one workload: the unnamed <code>[consumer]</code> with <code>enable.auto.commit: "false"</code>, and a <code>name: transaction</code> binding with a stable <code>transactional.id</code>. Per batch: <code>begin</code> → <code>send_batch</code> to both output topics → <code>send_offsets</code> (one past the last record per partition, leader epoch carried) → <code>commit</code>. A replayed batch after a broker restart cannot ship the same units twice. Tape &amp; Reel reads <code>read_committed</code>. Stays at one replica — the interface allocates no per-instance transactional ids.</td>
+            <td>Yield by bin Pareto, lots dispositioned/hr, txn commit latency, aborted txns, <code>txn-requires-abort</code> / <code>fatal</code> counts, duplicate check (must read 0), inventory ledger, replica pinned at 1</td>
+            <td>Kill the broker mid-batch → txn aborts and replays → ledger count unchanged; compare with a non-transactional twin that double-counts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose" style="font-size:.9rem;color:var(--ink-2)">"p" = partitions. Throughput ceiling for every consumer-side station is partitions × replicas — a partition is only ever assigned to one group member — which is why the elastic ceilings equal the partition counts. Inside one handler replica, useful concurrency is <code>min(assigned partitions, 64, poolSize × maxConcurrency)</code>; the templates ship <code>poolSize: 32</code>, <code>maxConcurrency: 1</code>.</p>
+  </section>
+
+  <!-- 4 ELASTIC -->
+  <section id="elastic">
+    <div class="eyebrow">4 · Elastic templates</div>
+    <h2>Two proposed templates: work queue and stream processor</h2>
+    <div class="note proposed prose"><b>Proposed, not shipped.</b> Desktop ships four <code>rust-kafka-*</code> templates. The two below are additions this demo needs; the manifest keys and export names are a proposal to react to, not something the plugin accepts today.</div>
+    <div class="prose">
+      <p>The shipped handler is already elastic in one dimension: within a replica, guest instances scale with assigned partition work from zero to <code>poolSize × maxConcurrency</code> and are reclaimed after <code>reclaimWindowSeconds</code> — and growing that pool creates no Kafka group member and moves no partition. What it does not do is change the number of group members. Since a replica's useful concurrency is capped at its assigned partitions, a burst across 12 partitions on a single replica gets at most 12 concurrent calls however large the pool is. The two variants keep the handler shape — the host owns the consumer, the group, the DLQ; the component exports an interface the host calls — and add a <code>scaling</code> block that moves <code>replicas</code> between a floor and a ceiling on a Kafka-side signal. The dashboard draws both dimensions: live instances inside a replica, and the replica window with its min, max and current position.</p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th>handler-export-work-queue</th><th>handler-export-stream-processor</th></tr></thead>
+        <tbody>
+          <tr><td><b>Shape</b></td><td>The shipped <code>handler</code> export with <code>handler.batch.size: 1</code>: one call per record, a job-level verdict, results via the imported <code>producer</code>. Nothing new in the WIT — the variant is the scaffold's manifest plus the <code>scaling</code> block.</td><td>A new export: the host hands the component a P3 <code>stream&lt;consumed-record&gt;</code> per assigned partition; the component keeps window state for that partition and emits results via <code>producer</code> while the stream is open. This is the gap the shipped handler leaves — required state cannot live in a handler instance.</td></tr>
+          <tr><td><b>Export</b></td><td><code>cosmonic:kafka/handler@0.5.0</code> (unchanged) — <code>handle(list&lt;consumed-record&gt;) → result&lt;option&lt;offset&gt;, handler-error&gt;</code></td><td><code>cosmonic:kafka/stream-handler@0.6.0</code> (proposed) — <code>process(partition-ref, stream&lt;consumed-record&gt;) → result&lt;_, handler-error&gt;</code> plus <code>flush(partition-ref) → result&lt;option&lt;offset&gt;, handler-error&gt;</code> on revoke</td></tr>
+          <tr><td><b>Scale signal</b></td><td>Consumer-group lag (records behind, summed across partitions), target lag per replica</td><td>Ingest rate per replica (records/s), target rate per replica</td></tr>
+          <tr><td><b>Window in demo</b></td><td class="num">replicas min 1 · max 12 (= partitions of <code>inspect.jobs</code>); instances 0–32 per replica</td><td class="num">replicas min 2 · max 8 (= partitions of <code>mold.telemetry</code>)</td></tr>
+          <tr><td><b>Scale-in safety</b></td><td>A batch of one completes before the instance is reclaimed; anything unstored redelivers under at-least-once; cooperative-sticky moves only the partitions that change hands</td><td><code>flush()</code> on revoke writes the open window to the output topic and returns the offset to store before the partition moves</td></tr>
+          <tr><td><b>Good for</b></td><td>Image analysis, document extraction, any "one record = one unit of variable-cost work"</td><td>Telemetry, rolling statistics, conformance checks, anything windowed</td></tr>
+          <tr><td><b>Station</b></td><td>ST-04 AOI &amp; X-ray</td><td>ST-05 Mold &amp; cure</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Proposed manifest shape</h3>
+<pre><code># workload.yaml — ST-04 inspection (the shipped handler-consumer manifest + a scaling block)
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+spec:
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [handler, producer]          # exports handler, imports producer for results
+      config:
+        # bootstrap.servers omitted on Desktop: inherits the kafka.yaml default (fab3-redpanda)
+        broker.address.family: v4
+        handler.topics: "inspect.jobs"          # the subscription
+        topics: "inspect.jobs,inspect.dlq,inspect.results"   # the GRANT: subscription + DLQ + every produce target
+        handler.group.id: "st04-inspect"        # required, never derived, stable across redeploys
+        dead-letter.topic: "inspect.dlq"        # required
+        handler.batch.size: "1"                 # one job per call → a verdict per job
+        auto.offset.reset: earliest
+      # secretFrom: [kafka-credentials]         # Desktop: SASL_PASSWORD → sasl.password; Control: a Secret
+  components:
+    - name: inspector
+      image: oci.localhost:8200/apps/st04-inspect:0.1.0
+      poolSize: 32                              # instances scale 0→32 with assigned partition work
+      maxConcurrency: 1
+      reclaimWindowSeconds: 30
+      reclaimMinInstances: 0
+      localResources:
+        allowedHosts: []                        # the plugin dials the broker, the component does not
+  scaling:                                      # PROPOSED — moves `replicas` (group members)
+    min: 1
+    max: 12          # never above partitions — that product is the ceiling
+    metric: kafka.consumer-lag
+    target: 500      # records of lag per replica before adding one
+    scaleUpCooldown: 30s
+    scaleDownCooldown: 120s</code></pre>
+<pre><code># workload.yaml — ST-05 mold telemetry (excerpt; proposed export)
+    - namespace: cosmonic
+      package: kafka
+      version: 0.6.0                            # PROPOSED: the version that adds stream-handler
+      interfaces: [stream-handler, producer]
+      config:
+        broker.address.family: v4
+        handler.topics: "mold.telemetry"
+        topics: "mold.telemetry,mold.dlq,mold.profile"
+        handler.group.id: "st05-cure-profile"
+        dead-letter.topic: "mold.dlq"
+        max.poll.interval.ms: "900000"          # long windows want the poll interval, not a smaller pool
+  scaling:
+    min: 2
+    max: 8
+    metric: kafka.ingest-rate-per-replica
+    target: 8000     # records/s per replica</code></pre>
+  </section>
+
+  <!-- 5 DEMO -->
+  <section id="demo">
+    <div class="eyebrow">5 · Technical demo</div>
+    <h2>What we actually run</h2>
+    <div class="prose">
+      <p>Two ways to run the same six Workload specs, because the spec is the same <code>runtime.wasmcloud.dev/v1alpha1</code> schema on both hosts: on a laptop, Cosmonic Desktop (its daemon compiles in Control's <code>plugin-kafka</code>) with Redpanda in a container; on a cluster, Cosmonic Control 0.11 on wasmCloud 2.9 with the <code>deploy/workload-deployment.yaml</code> each scaffold carries. The laptop is the one we demo from. The scaffolds come from <code>cosmonic_project_create(template="rust-kafka-&lt;pattern&gt;")</code>, so the audience can watch the Builder produce a station from the same starters.</p>
+    </div>
+
+    <h3>Environment</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Piece</th><th>What it is</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><b>Redpanda</b></td><td>Single-node Kafka-compatible broker on <code>127.0.0.1:9092</code></td><td>Topics pre-created with the partition counts in the table — the plugin creates none. SASL/SCRAM on, so the credential path is the real one: a <code>SASL_PASSWORD</code> ref registered in Desktop arrives as <code>sasl.password</code></td></tr>
+          <tr><td><b>Cosmonic Desktop</b></td><td><code>cosmonicd</code> with the default <code>kafka</code> feature, serving <code>cosmonic:kafka@0.5.0</code></td><td><code>&lt;state_dir&gt;/kafka.yaml</code> holds the default <code>bootstrap.servers</code>, <code>broker.address.family: v4</code> and <code>secret_from: [fab3-sasl]</code>, so no station manifest carries a broker or a credential. A host-only key in a manifest, or a broker off the machine egress allow-list, is refused at apply with a sentence that names the key (we show this)</td></tr>
+          <tr><td><b>Six station workloads</b></td><td>One per template, Rust, <code>wasm32-wasip2</code>, wit-bindgen 0.58 async (WASI p3)</td><td>Four from the shipped <code>rust-kafka-*</code> scaffolds (world names kept, crates renamed), two from the proposed variants. Each verified with <code>wasm-tools component wit</code> for the right <code>cosmonic:kafka/…@0.5.0</code> lines and <code>async-lift</code> before its binding's <code>interfaces:</code> list is written</td></tr>
+          <tr><td><b>Generators</b></td><td>One Rust binary per station, producing synthetic sensor records with a shared clock</td><td>Each has a <code>--scenario</code> flag (baseline, shift-change, poison, drift, excursion) and emits its own produced-count metric so we can validate consumed == produced. ST-01's generator drives the HTTP route (<code>POST /produce-batch</code>) rather than the broker</td></tr>
+          <tr><td><b>ClickHouse</b></td><td>Sink for ST-02 and the dashboard's history</td><td>A common shape for a factory data platform; the dashboard reads its summaries from here and its live counters from a metrics topic. ST-02's insert is idempotent on die id because its output is at-least-once</td></tr>
+          <tr><td><b>Line dashboard</b></td><td>An HTTP component + a handler consumer on <code>*.metrics</code></td><td>Serves the six-section page below; <code>/validate</code> returns produced vs consumed per station and each group's lag as <code>rpk group describe</code> reports it — lag 0 is "caught up"; offsets that stopped moving prove nothing</td></tr>
+          <tr><td><b>Non-transactional twin</b></td><td>A second copy of ST-06 built from <code>rust-kafka-pull-service</code></td><td>Same input, shadow ledger, so the broker-restart beat shows the duplicates it produces next to the zero the transactional one produces</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Topics to create before anything starts</h3>
+<pre><code>rpk topic create probe.lots -p 6
+rpk topic create dieattach.readings -p 6  dieattach.flags -p 3  dieattach.dlq -p 1
+rpk topic create wirebond.raw -p 12  wirebond.metrics -p 6  wirebond.dlq -p 1
+rpk topic create inspect.jobs -p 12  inspect.results -p 6  inspect.dlq -p 1
+rpk topic create mold.telemetry -p 8  mold.profile -p 4  mold.dlq -p 1
+rpk topic create finaltest.bins -p 6  lot.disposition -p 3  inventory.moves -p 3
+rpk topic create line.metrics -p 3</code></pre>
+
+    <h3>Demo script (about 12 minutes)</h3>
+    <div class="beats">
+      <div class="beat"><div class="t">00:00</div><div><h4>Quiet Tuesday</h4><p>Baseline scenario on all six generators. Walk the dashboard left to right; every station's consumed count equals its produced count on <code>/validate</code> and every group's lag reads 0. ST-04 sits at 1 replica, ST-05 at 2; ST-02's live instances hover at 2–3 of 32 and drop to 0 when a partition goes quiet.</p></div></div>
+      <div class="beat"><div class="t">01:30</div><div><h4>The binding is the whole client config</h4><p>Show ST-02's manifest: no broker, no credential, no client config in the code — just <code>handler.topics</code>, the <code>topics</code> grant, <code>handler.group.id</code>, <code>dead-letter.topic</code>. Then <code>cosmonic_workload_validate</code> a seventh manifest that sets <code>plugin.library.paths</code>: refused, and the sentence names the key, never a value. Then one that grants <code>topics</code> without its DLQ: the bind fails permanently — Failed, no retry — with the plugin's own words.</p></div></div>
+      <div class="beat"><div class="t">03:00</div><div><h4>Shift change</h4><p>Switch ST-01 and ST-05 generators to <code>shift-change</code>. Probe uploads jump 100×; ST-01's <code>send_batch</code> per lot absorbs it (batches of ~25 wafers; the measured curve is ~126 records/s per caller for per-record sends and 3,300–5,000 for batches of 100), ack latency p95 stays under 50 ms. Mold telemetry doubles; ST-05's replica marker walks 2→4→6 inside its window, records/s per replica stays flat.</p></div></div>
+      <div class="beat"><div class="t">05:00</div><div><h4>Poison pill, two ways</h4><p>ST-02 generator emits a die record with a NaN thickness. The handler returns <code>Err(Permanent)</code>; the record lands in <code>dieattach.dlq</code> with its origin topic/partition/offset as headers, the DLQ counter ticks to 1, and the partition advances. Then flip the generator to the same record against a deliberately naive build that panics: the trap counts as transient, the partition stalls for five redeliveries, then the record dead-letters. Same outcome, five backoffs later — the point of "<code>Permanent</code>, never panic".</p></div></div>
+      <div class="beat"><div class="t">06:30</div><div><h4>Bond excursion → inspection backlog</h4><p>ST-03 <code>drift</code> scenario sags one bonder's transducer power; NSOP alarm fires on bonder 17 and the service <code>seek</code>s that bonder's partition back 60 s to replay the signature onto <code>wirebond.metrics</code>. ST-04 generator goes to <code>excursion</code> (20× jobs). Lag climbs, live instances inside the single replica pin at 12 (its assigned partitions — the pool cannot help past that), the replica marker slides 1→12 against the ceiling, p95 job latency stays flat, lag drains, marker slides back to 1 after cooldown. The scale-event timeline shows the whole arc.</p></div></div>
+      <div class="beat"><div class="t">09:00</div><div><h4>Restart the broker mid-batch</h4><p>Restart Redpanda. Expect the gap the skill warns about: a stretch of silent no-delivery, then automatic recovery on the 10 s backoff loop — the dashboard alerts on lag, and a probe record (<code>rpk topic produce</code>) is what proves the pipeline is back. ST-06's transactional ledger: aborted txns 1 (<code>txn-requires-abort</code> honoured), duplicates 0, inventory count unchanged. The non-transactional twin's shadow ledger shows +240 phantom units. Say the line out loud: a DB write isn't covered by the transaction — which is why ST-02 sinks idempotently instead.</p></div></div>
+      <div class="beat"><div class="t">11:00</div><div><h4>Rolling update</h4><p>Publish a new ST-03 revision with a tighter NSOP threshold. The stable <code>consumer.group.id</code> is what makes the new instance resume where the old one stopped; cooperative-sticky rebalancing moves only the partitions that change hands, and the heat strip never blanks. Close on <code>/validate</code>: every station still consumed == produced (plus the two DLQ records, accounted for), every group's lag back to 0.</p></div></div>
+    </div>
+
+    <h3>Validation we show, not describe</h3>
+    <div class="prose">
+      <p>Every beat has a number on the page that either matches or doesn't. Per station: produced count (from the generator), consumed count (from the workload), consumer-group lag (from the broker, the way <code>rpk group describe</code> reports it), DLQ count, redelivery count, and for ST-06 a duplicate check computed from the ledger. For the handler stations: live instances against assigned partitions. For the elastic stations: the replica count time series overlaid on lag or ingest rate, so the audience sees cause and effect rather than a claim about it. All of it comes from the same metrics topic the dashboard reads, so there is no second instrumentation path.</p>
+    </div>
+  </section>
+
+  <!-- 6 DASHBOARD -->
+  <section id="dash">
+    <div class="eyebrow">6 · Dashboard</div>
+    <h2>Fab 3 line dashboard</h2>
+    <p class="prose">A summary strip on top, then six panels in floor order, then a faults ledger. The panels share one layout — header with station and template, three or four summary numbers, one small chart, live faults — so the eye learns it once. Elastic stations add a replica-window slider. Numbers below are the baseline scenario, as examples.</p>
+
+    <div class="dash" aria-label="Dashboard wireframe">
+      <div class="bar"><span>MERIDIAN · FAB 3 · BACK-END LINE</span><span>shift B · 14:22 · broker fab3-redpanda ● connected</span></div>
+      <div class="kpis">
+        <div class="kpi"><div class="l">Line UPH</div><div class="v">7,180</div><div class="d good">▲ 2.1% vs shift A</div></div>
+        <div class="kpi"><div class="l">First-pass yield</div><div class="v">97.4%</div><div class="d">target 97.0</div></div>
+        <div class="kpi"><div class="l">WIP lots</div><div class="v">38</div><div class="d">4 on hold</div></div>
+        <div class="kpi"><div class="l">Open faults</div><div class="v">2</div><div class="d warn">1 warn · 1 crit</div></div>
+        <div class="kpi"><div class="l">Total consumer lag</div><div class="v">412</div><div class="d good">draining</div></div>
+        <div class="kpi"><div class="l">Replicas (elastic)</div><div class="v">1 + 2</div><div class="d">ST-04 · ST-05</div></div>
+      </div>
+      <div class="panels">
+        <!-- ST-01 -->
+        <div class="panel">
+          <div class="ph"><b>ST-01 Wafer probe intake</b><span>http-producer</span></div>
+          <div class="rows"><div><span>Lots received / hr</span><em>41</em></div><div><span>Wafers / lot (avg)</span><em>25</em></div><div><span>Upload → ack p95</span><em>38 ms</em></div><div><span>Batch size (avg)</span><em>25</em></div><div><span>Per-record errors · rejected uploads</span><em>0 · 0</em></div></div>
+          <svg viewBox="0 0 200 56" aria-label="lots per hour, last 4 hours"><path d="M0 40 L20 38 L40 41 L60 36 L80 39 L100 12 L120 30 L140 37 L160 38 L180 35 L200 36 L200 56 L0 56Z" fill="var(--accent-soft)"/><path d="M0 40 L20 38 L40 41 L60 36 L80 39 L100 12 L120 30 L140 37 L160 38 L180 35 L200 36" fill="none" stroke="var(--accent)" stroke-width="1.5"/><circle cx="200" cy="36" r="2.5" fill="var(--accent)"/></svg>
+          <div class="fault g">no faults · shift-change spike at 14:00 absorbed</div>
+        </div>
+        <!-- ST-02 -->
+        <div class="panel">
+          <div class="ph"><b>ST-02 Die attach</b><span>handler + producer</span></div>
+          <div class="rows"><div><span>Readings / s · lag</span><em>296 · 0</em></div><div><span>In-spec · flags produced</span><em>99.6% · 71</em></div><div><span>Cpk (thickness), worst head</span><em>1.41 · H3</em></div><div><span>Live instances / 32</span><em>3</em></div><div><span>DLQ · redeliveries · partial resumes</span><em>1 · 3 · 1</em></div></div>
+          <svg viewBox="0 0 200 56" aria-label="Cpk per head"><rect x="8" y="14" width="36" height="34" fill="var(--good)"/><rect x="56" y="10" width="36" height="38" fill="var(--good)"/><rect x="104" y="20" width="36" height="28" fill="var(--warn)"/><rect x="152" y="8" width="36" height="40" fill="var(--good)"/><path d="M0 22H200" stroke="var(--ink-3)" stroke-dasharray="3 3" stroke-width="1"/><text x="2" y="20" font-size="7" fill="var(--ink-3)">1.33</text></svg>
+          <div class="fault">1 record in dieattach.dlq · NaN thickness · prober P-07</div>
+        </div>
+        <!-- ST-03 -->
+        <div class="panel">
+          <div class="ph"><b>ST-03 Wire bond</b><span>pull-service</span></div>
+          <div class="rows"><div><span>Bonds / s</span><em>1,984</em></div><div><span>NSOP rate</span><em>0.08%</em></div><div><span>Window flush interval</span><em>5.0 s</em></div><div><span>Consumer lag</span><em>212</em></div><div><span>BATCH_SIZE · rebalances</span><em>100 · 0</em></div></div>
+          <svg viewBox="0 0 200 56" aria-label="40-bonder heat strip"><g id="hs"></g></svg>
+          <div class="fault c">bonder 17 · transducer power −18% · NSOP 1.9%</div>
+        </div>
+        <!-- ST-04 -->
+        <div class="panel new">
+          <div class="ph"><b>ST-04 AOI &amp; X-ray</b><span>work-queue · elastic</span></div>
+          <div class="rows"><div><span>Queue depth (lag)</span><em>14</em></div><div><span>Job latency p50 / p95</span><em>240 / 410 ms</em></div><div><span>Jobs / min · instances / 32</span><em>31 · 2</em></div><div><span>Top defect</span><em>void &gt;10% · 6</em></div></div>
+          <div class="scalebar"><div class="lbl"><span>replicas</span><span>1 of 1–12</span></div><div class="track"><div class="window" style="left:0;right:0"></div><div class="now" style="left:1%"></div></div><div class="lbl"><span>min 1</span><span>max 12</span></div></div>
+          <svg viewBox="0 0 200 56" aria-label="replica count over lag"><path d="M0 50 L60 50 L70 20 L90 8 L130 8 L140 30 L160 50 L200 50" fill="none" stroke="var(--copper)" stroke-width="1.6"/><path d="M0 48 L60 46 L70 14 L80 6 L100 10 L120 26 L140 40 L160 48 L200 48" fill="none" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="3 2"/><text x="2" y="10" font-size="7" fill="var(--copper)">replicas</text><text x="2" y="19" font-size="7" fill="var(--accent)">lag</text></svg>
+          <div class="fault g">last scale event: 12→1 at 13:51 (excursion drained)</div>
+        </div>
+        <!-- ST-05 -->
+        <div class="panel new">
+          <div class="ph"><b>ST-05 Mold &amp; cure</b><span>stream-processor · elastic</span></div>
+          <div class="rows"><div><span>Samples / s</span><em>49,300</em></div><div><span>Profile conformance</span><em>99.1%</em></div><div><span>rec/s per replica</span><em>24,650</em></div><div><span>Window flushes on rebalance</span><em>4</em></div></div>
+          <div class="scalebar"><div class="lbl"><span>replicas</span><span>2 of 2–8</span></div><div class="track"><div class="window" style="left:14%;right:0"></div><div class="now" style="left:14%"></div></div><div class="lbl"><span>min 2</span><span>max 8</span></div></div>
+          <svg viewBox="0 0 200 56" aria-label="eight oven zone temperatures"><g id="zones"></g></svg>
+          <div class="fault">zone 5 · +4.2 °C above profile · press M-3 · watching</div>
+        </div>
+        <!-- ST-06 -->
+        <div class="panel">
+          <div class="ph"><b>ST-06 Final test &amp; disposition</b><span>transactional · replicas 1</span></div>
+          <div class="rows"><div><span>Units / s · BATCH_SIZE</span><em>118 · 100</em></div><div><span>Lots dispositioned / hr</span><em>39</em></div><div><span>Txn commit p95</span><em>62 ms</em></div><div><span>Aborted · requires-abort · fatal</span><em>0 · 0 · 0</em></div><div><span>Duplicates · ledger vs twin</span><em>0 · Δ 0</em></div></div>
+          <svg viewBox="0 0 200 56" aria-label="yield by bin pareto"><rect x="6" y="6" width="24" height="42" fill="var(--good)"/><rect x="36" y="38" width="24" height="10" fill="var(--warn)"/><rect x="66" y="42" width="24" height="6" fill="var(--warn)"/><rect x="96" y="45" width="24" height="3" fill="var(--warn)"/><rect x="126" y="46" width="24" height="2" fill="var(--crit)"/><rect x="156" y="47" width="24" height="1" fill="var(--crit)"/><text x="6" y="55" font-size="6" fill="var(--ink-3)">bin1 pass</text><text x="36" y="55" font-size="6" fill="var(--ink-3)">Vout</text><text x="66" y="55" font-size="6" fill="var(--ink-3)">Iq</text><text x="96" y="55" font-size="6" fill="var(--ink-3)">open</text><text x="126" y="55" font-size="6" fill="var(--ink-3)">short</text></svg>
+          <div class="fault g">read_committed · ledger consistent</div>
+        </div>
+      </div>
+      <div class="ledger">
+        <div class="h"><span>time</span><span>station</span><span>fault</span><span>state</span></div>
+        <div><span>14:19</span><span>ST-03 wire bond</span><span>bonder 17 NSOP 1.9% — transducer power sag</span><span style="color:var(--crit)">CRIT · open</span></div>
+        <div><span>14:07</span><span>ST-05 mold</span><span>zone 5 +4.2 °C above cure profile, press M-3</span><span style="color:var(--warn)">WARN · watching</span></div>
+        <div><span>13:51</span><span>ST-04 inspection</span><span>scale-in 12→1, backlog drained in 6m40s</span><span style="color:var(--good)">INFO</span></div>
+        <div><span>13:44</span><span>ST-02 die attach</span><span>1 record → dieattach.dlq (NaN thickness, P-07)</span><span style="color:var(--good)">resolved</span></div>
+      </div>
+    </div>
+
+    <h3>What each section shows</h3>
+    <div class="secdesc">
+      <div class="s"><h4>Summary strip</h4><p>Line-wide numbers a supervisor checks first: units per hour, first-pass yield, WIP lots and holds, open faults by severity, total consumer lag across every group, and the current replica count for the two elastic stations. Every number links down to the panel it comes from.</p></div>
+      <div class="s"><h4>ST-01 Wafer probe intake <span class="pill">rust-kafka-http-producer</span></h4><p class="kv"><b>Summary:</b> lots/hr, wafers per lot, upload→ack p95, average batch size, per-record errors inside batches, rejected uploads. <b>Chart:</b> lots/hr over the last 4 hours, so the shift-change spike is visible and so is the fact that latency did not move. <b>Faults:</b> schema-rejected uploads with the prober id; a <code>topic-authorization-failed</code> (a topic outside the grant, not a broker problem); ack timeouts if the broker is unreachable.</p></div>
+      <div class="s"><h4>ST-02 Die attach <span class="pill">rust-kafka-handler-consumer</span> <span class="pill">+ producer</span></h4><p class="kv"><b>Summary:</b> readings/s and group lag, in-spec % and flags produced, Cpk for bond-line thickness per head, live instances of 32 (the pool breathing with partition work), DLQ count, redeliveries, partial-batch resumes (the <code>Ok(Some(offset))</code> path). <b>Chart:</b> Cpk per head against the 1.33 line. <b>Faults:</b> the DLQ record with its reason and origin headers; a partition stalled in the five-trap loop; heads below Cpk 1.33.</p></div>
+      <div class="s"><h4>ST-03 Wire bond <span class="pill">rust-kafka-pull-service</span></h4><p class="kv"><b>Summary:</b> bonds/s, NSOP rate, window flush interval, consumer lag, <code>BATCH_SIZE</code>, rebalance events seen. <b>Chart:</b> a 40-cell heat strip, one cell per bonder, colored by NSOP rate — the drifting bonder lights up. <b>Faults:</b> per-bonder NSOP alarms with the transducer power delta and the replay <code>seek</code> that followed; a service restart from committed offsets.</p></div>
+      <div class="s new"><h4>ST-04 AOI &amp; X-ray <span class="pill new">handler-export-work-queue</span></h4><p class="kv"><b>Summary:</b> queue depth (lag), job latency p50/p95, jobs/min, live instances per replica, top defect class. <b>Replica window:</b> a slider from min 1 to max 12 with the current count marked; the window itself is drawn so the ceiling is visible even when idle. <b>Chart:</b> replica count over lag on one time axis — the scale-out and scale-in are read directly off it. <b>Faults:</b> jobs redelivered alone after a trap, jobs in the DLQ, scale events as informational rows.</p></div>
+      <div class="s new"><h4>ST-05 Mold &amp; cure <span class="pill new">handler-export-stream-processor</span></h4><p class="kv"><b>Summary:</b> samples/s, cure-profile conformance %, records/s per replica (the scale signal), window flushes on revoke. <b>Replica window:</b> slider from min 2 to max 8. <b>Chart:</b> eight oven-zone temperatures as a live strip against the profile band; a drifting zone shows as a bar outside the band. <b>Faults:</b> zone drift, humidity holds, particle-count excursions, each naming the press.</p></div>
+      <div class="s"><h4>ST-06 Final test &amp; disposition <span class="pill">rust-kafka-transactional</span></h4><p class="kv"><b>Summary:</b> units/s and <code>BATCH_SIZE</code>, lots dispositioned/hr, transaction commit p95, aborted transactions split by <code>txn-requires-abort</code> and <code>fatal</code>, duplicates detected (must read 0), the delta between the transactional ledger and the non-transactional twin, and the replica count pinned at 1 with its <code>transactional.id</code>. <b>Chart:</b> yield Pareto by bin. <b>Faults:</b> aborted transactions with cause; a <code>fatal</code> that retired the native client and the <code>begin</code> that re-fenced; any nonzero duplicate count is a critical fault by definition.</p></div>
+      <div class="s"><h4>Faults ledger</h4><p>Every fault and scale event on the line in one time-ordered list with station, description, and state. This is what the audience reads back at the end of the demo to see the story they just watched.</p></div>
+    </div>
+  </section>
+
+  <!-- 7 SKILL & TEMPLATE RECAP -->
+  <section id="readme">
+    <div class="eyebrow">7 · Skill &amp; template recap</div>
+    <h2>What the shipped skill and templates say</h2>
+    <div class="prose">
+      <p>Repeated here so this document stands alone. Sources: the <code>cosmonic-kafka</code> skill (v1.2.0 — the same file in <code>agent-integrations/core/skills</code> and vendored into Desktop's <code>cosmonic-mcp</code>, apart from the version stamp), the four <code>rust-kafka-*</code> starters compiled into Desktop (vendored from awesome-cosmonic <code>components/kafka</code> @ <code>f5326286</code>, the <code>cosmonic:kafka@0.5.0</code> set, tested live against Cosmonic Control 0.11.0 on wasmCloud 2.9), and <code>daemon/docs/KAFKA.md</code>.</p>
+      <p>A component on Cosmonic does not link librdkafka. It <b>imports</b> <code>cosmonic:kafka@0.5.0</code> and the host's Kafka plugin — Control's own <code>plugin-kafka</code>, compiled into Desktop's daemon behind the default-on <code>kafka</code> feature — owns every client. The broker address, the credential, the consumer group and the topic grant live in the workload's binding; the component only ever sees <code>producer</code> functions, a <code>Consumer</code> session, a <code>Transaction</code>, or the batches the host hands its <code>handler</code>.</p>
+    </div>
+
+    <h3>Hard rules</h3>
+    <div class="prose">
+      <ul>
+        <li><b>The guest never dials or configures Kafka.</b> No <code>rdkafka</code> crate, no <code>bootstrap.servers</code> in code, no client config through the WIT at all: producer functions are called directly on the binding (there is no producer <code>open</code>, <code>close</code> or <code>flush</code>), <code>Consumer::open()</code> takes no arguments, <code>transaction::begin()</code> takes none. A component cannot redirect itself or pick a group.</li>
+        <li><b><code>topics</code> is the grant; <code>handler.topics</code> is the subscription.</b> The grant must contain every subscription, the <code>dead-letter.topic</code>, and every topic a <code>producer</code>/<code>consumer</code>/<code>transaction</code> call names. Absent or empty grants nothing: a handler binding without <code>topics</code> is refused at bind. Never <code>*</code> wider than needed.</li>
+        <li><b>Handlers: <code>handler.group.id</code> and <code>dead-letter.topic</code> are both required</b> and never derived. A pull consumer's group is <code>consumer.group.id</code>; plain <code>group.id</code> is not a binding key. A <code>transaction</code> binding needs <code>transactional.id</code> and, for <code>send-offsets</code>, <code>transaction.group.id</code>.</li>
+        <li><b>Start with the handler — it can produce.</b> A handler that imports <code>producer</code> beside its <code>handler</code> export is the elastic consume-transform-produce shape; the host reuses one binding-scoped producer across instances. Reach for the pull service only when the code needs the consumer <em>session</em> (assign, pause, seek, rebalance events, pull pacing, its own commits), and for <code>transaction</code> only when outputs and offsets must commit atomically. Never open a pull consumer per invocation: it is a stateful group member (64 per component).</li>
+        <li><b>Async-only WASI p3.</b> Every function is an <code>async func</code>. Rust needs wit-bindgen ≥ 0.58 with <code>async-spawn</code> + <code>inter-task-wakeup</code> on <code>wasm32-wasip2</code>. TinyGo cannot bind it; there is no Go set.</li>
+        <li><b>Malformed input is <code>Permanent</code>, never a panic.</b> A trap is retried like a transient error; five consecutive traps on one record dead-letter it, and until then that partition makes no progress.</li>
+      </ul>
+    </div>
+
+    <h3>Which template? (ids as Desktop ships them)</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Template id (<code>rust-kafka-…</code>)</th><th>Shape</th><th>Guarantee</th><th>Reach for it when the user says</th><th>Not this if</th></tr></thead>
+        <tbody>
+          <tr><td><b>handler-consumer</b> (start here)</td><td>host pushes a partition-ordered batch of records to <code>handle</code>; add <code>producer</code> to publish</td><td>at-least-once; DLQ on <code>Permanent</code></td><td>"consume Kafka", "process each record", "event handler", "filter", "validate", "notify", "sink", "consume → transform → produce", "enrich a topic", "serverless", "scale to zero"</td><td>you need assign/pause/seek/rebalance events or your own commit policy (→ pull service), or outputs and offsets must commit in one transaction (→ transactional)</td></tr>
+          <tr><td><b>http-producer</b></td><td>HTTP request → <code>send</code> / <code>send-batch</code> on the binding's producer</td><td>broker ack per record (<code>acks</code> configurable)</td><td>"webhook to Kafka", "API that writes to a topic", "ingest gateway", "UI events onto a topic", "produce from a request"</td><td>the work is driven by Kafka records rather than HTTP</td></tr>
+          <tr><td><b>pull-service</b></td><td>long-running <code>wasi:cli/run</code> service owns one consumer session + uses the host's producer, batches, commits explicitly</td><td>at-least-once; your own DLQ routing</td><td>"seek", "pause/resume", "assign partitions", "react to rebalances", "commit offsets myself", "custom pull pacing", "long-lived session"</td><td>ordinary elastic processing (the handler is less code, scales without touching group membership, and can produce), or you need exactly-once</td></tr>
+          <tr><td><b>transactional</b></td><td>pull service + a second, named <code>transaction</code> binding: outputs and input offsets commit atomically</td><td>exactly-once (read-process-write)</td><td>"exactly-once", "transactional", "payments", "inventory", "ledger", "dedup-sensitive", "read_committed"</td><td>throughput matters more than duplicates (a txn round trip per batch), or side effects leave Kafka — a DB write is not covered; then at-least-once + idempotent writes is the honest design</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The surface: five interfaces, one export</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Import</th><th>Gives the guest</th></tr></thead>
+        <tbody>
+          <tr><td><code>types</code></td><td><code>consumed-record</code>, <code>produce-record</code>, <code>produce-ack</code>, <code>partition-ref</code>, <code>partition-offset</code>, <code>partition-result</code>, <code>watermarks</code>, <code>error {code, message, fatal, retriable, txn-requires-abort}</code>. Bound whenever any other interface is; needs no <code>interfaces:</code> entry.</td></tr>
+          <tr><td><code>producer</code></td><td>Free functions on the binding's host-owned client — <code>send(topic, record) → produce-ack</code>, <code>send-batch(topic, records) → list&lt;result&lt;ack, error&gt;&gt;</code> (per-record outcomes), <code>send-stream(topic, stream) → future&lt;result&gt;</code>, <code>partition-count</code>, <code>watermark-offsets</code>. No <code>open</code>, no <code>flush</code>.</td></tr>
+          <tr><td><code>consumer</code></td><td><code>consumer.open()</code> (no arguments), <code>subscribe</code>, <code>records() → (stream&lt;consumed-record&gt;, future&lt;result&gt;)</code> (callable once), <code>commit(offsets)</code> (<code>[]</code> = the stored positions), <code>committed</code>, <code>position</code>, <code>seek</code>, <code>pause</code>/<code>resume</code>, <code>assign</code>/<code>incremental-assign</code>, <code>rebalances() → stream&lt;rebalance-event&gt;</code>, <code>watermark-offsets</code>, <code>offsets-for-times</code>, <code>close</code>.</td></tr>
+          <tr><td><code>transaction</code></td><td>Its own binding, never shared with <code>producer</code>: <code>begin() → transaction</code> (fences the previous holder of the binding's <code>transactional.id</code>; one active transaction per binding), then <code>send</code>, <code>send-batch</code>, <code>send-stream</code>, <code>send-offsets(offsets)</code> (the group is the binding's <code>transaction.group.id</code>), <code>commit</code>, <code>abort</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Export</th><th>The host calls it for</th><th>Manifest keys that drive it</th></tr></thead>
+        <tbody>
+          <tr><td><code>handler.handle(list&lt;consumed-record&gt;) → result&lt;option&lt;offset&gt;, handler-error&gt;</code></td><td>each batch from ONE partition, in offset order — up to <code>handler.batch.size</code> (default 100, max 10000) and ~1 MiB</td><td><code>handler.topics</code>, <code>handler.group.id</code>, <code>dead-letter.topic</code>, <code>topics</code> (must cover both), <code>handler.batch.size</code>, <code>auto.offset.reset</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="prose">
+      <p><b>Handler return semantics</b> (at-least-once): <code>Ok(None)</code> = the whole batch handled, the host stores past its last record; <code>Ok(Some(offset))</code> = handled through that record (its own offset, not the next), the host stores past it and redelivers the rest; <code>Err(Transient)</code> = nothing handled, rewind and redeliver (backing off 100 ms → 30 s) indefinitely; <code>Err(Permanent)</code> = a single-record batch goes to <code>dead-letter.topic</code> with the origin topic/partition/offset and the detail string as headers, and the partition advances — on a longer batch the host redelivers the first record alone so the verdict lands on one record. After a failure the loop's batch ceiling drops to one and doubles back with each success. Prefer <code>Ok(Some(..))</code> over an error once any record succeeded.</p>
+    </div>
+
+    <h3>The shipped scaffolds</h3>
+<pre><code>cosmonic_project_create(template="rust-kafka-&lt;pattern&gt;", path=…, name=…)   # or: cosmonic new rust-kafka-&lt;pattern&gt;
+
+.wash/config.yaml        build command + the cosmonic:kafka binding (workload.hostInterfaces)
+                         + workload.environment.config (the service patterns' topics/batch size)
+workload.yaml            the same binding as a Cosmonic Workload (image: built-in registry oci.localhost:8200)
+deploy/workload-deployment.yaml   the Kubernetes WorkloadDeployment (Control; prebuilt upstream image)
+src/lib.rs               START HERE — the header comment states the pattern's semantics
+wit/world.wit + wit/deps/cosmonic-kafka-0.5.0/package.wit   vendored; no registry fetch to build
+wkg.lock + wkg-registries.toml   to re-fetch the WIT (WKG_CONFIG_FILE=./wkg-registries.toml wash wit fetch)</code></pre>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Scaffold</th><th>Binding as shipped</th><th>Component</th><th>Topics to create</th></tr></thead>
+        <tbody>
+          <tr><td><b>handler-consumer</b></td><td><code>interfaces: [handler]</code> · <code>bootstrap.servers: 127.0.0.1:9092</code> · <code>broker.address.family: v4</code> · <code>handler.topics: demo.events</code> · <code>topics: demo.events,demo.events.dlq</code> · <code>handler.group.id: demo-events-handler</code> · <code>auto.offset.reset: earliest</code> · <code>dead-letter.topic: demo.events.dlq</code></td><td><code>poolSize: 32</code>, <code>maxConcurrency: 1</code>, <code>reclaimWindowSeconds: 30</code>, <code>reclaimMinInstances: 0</code>, <code>allowedHosts: []</code>; <code>replicas: 1</code> on Control</td><td><code>demo.events</code>, <code>demo.events.dlq</code></td></tr>
+          <tr><td><b>http-producer</b></td><td><code>interfaces: [producer]</code> · <code>topics: demo.events</code>; plus the <code>wasi:http</code> entry with <code>interfaces: [handler]</code>, <code>host: &lt;name&gt;.localhost</code>. Routes: <code>POST /produce?topic=T&amp;key=K&amp;value=V</code> → one <code>send</code>; <code>POST /produce-batch?topic=T&amp;count=N&amp;size=S</code> → 1–10,000 records via <code>send_batch</code>, one line per record</td><td><code>poolSize: 4</code></td><td><code>demo.events</code></td></tr>
+          <tr><td><b>pull-service</b></td><td><code>interfaces: [consumer, producer]</code> · <code>topics: demo.events,demo.enriched,demo.events.dlq</code> · <code>consumer.group.id: demo-pipeline-g1</code> · <code>auto.offset.reset: earliest</code> · <code>enable.auto.commit: "false"</code></td><td>env <code>IN_TOPIC</code> (<code>input</code>), <code>OUT_TOPIC</code> (<code>output</code>), <code>DLQ_TOPIC</code> (<code>input.dlq</code>), <code>BATCH_SIZE</code> (<code>1</code>, capped at 100, no batch timer) via <code>localResources.environment.config</code>; <code>maxRestarts: 100</code> on Control</td><td><code>demo.events</code>, <code>demo.enriched</code>, <code>demo.events.dlq</code></td></tr>
+          <tr><td><b>transactional</b></td><td>unnamed <code>[consumer]</code>: <code>topics: demo.events</code> · <code>consumer.group.id: demo-txn-g1</code> · <code>enable.auto.commit: "false"</code>; <code>name: transaction</code> <code>[transaction]</code>: <code>topics: demo.events,demo.enriched</code> (output AND every input whose offsets it enlists) · <code>transactional.id: demo-pipeline-txn-1</code> · <code>transaction.group.id: demo-txn-g1</code></td><td>env <code>IN_TOPIC</code>, <code>OUT_TOPIC</code>, <code>BATCH_SIZE</code>; <b>keep <code>replicas: 1</code></b> — every live transactional producer needs a distinct stable id and the interface allocates none per instance</td><td><code>demo.events</code>, <code>demo.enriched</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Where the broker comes from</h3>
+    <div class="prose">
+      <p>The plugin opens its connections from the daemon process — librdkafka dials the broker, not the component, so <code>allowedHosts</code> stays <code>[]</code>. The plugin declares <code>bootstrap.servers</code> a required key on its own binding schema and wash-runtime checks it against the fully resolved binding under every policy, so every binding has its broker before the component runs, from one of two places: the manifest's own <code>cosmonic:kafka</code> entry (Control's model; what the templates do), or on Desktop a <code>&lt;state_dir&gt;/kafka.yaml</code> default the binding inherits. <code>kafka.yaml</code> is a base the workload overrides key by key; a binding with a broker from neither is refused in the plugin's own words.</p>
+    </div>
+<pre><code># &lt;state_dir&gt;/kafka.yaml — Desktop's defaults (file-only, read at boot, fail-closed)
+config:                          # the unnamed binding, and the base under every named one
+  bootstrap.servers: 127.0.0.1:9092
+  broker.address.family: v4
+secret_from: [kafka-sasl-password]   # registered refs whose VALUES join that layer at boot
+bindings:                        # `name: orders` on a workload's cosmonic:kafka entry
+  orders:
+    config:
+      bootstrap.servers: kafka.internal:9093
+      security.protocol: SASL_SSL
+      sasl.mechanism: SCRAM-SHA-512
+    secret_from: [orders-sasl-password]</code></pre>
+    <div class="prose">
+      <ul>
+        <li><b>Host-only keys are refused to a workload on every host:</b> anything loading native code (<code>plugin.library.paths</code>, <code>ssl.engine.location</code>, <code>ssl.providers</code>), reading a host file by path (<code>ssl.*.location</code>, <code>https.ca.location</code>, <code>sasl.kerberos.keytab</code>, the <code>sasl.oauthbearer.assertion.*.file</code> keys), running a command or reaching a host-chosen URL (<code>sasl.kerberos.kinit.cmd</code>, <code>sasl.oauthbearer.token.endpoint.url</code>), or weakening/flooding the host (<code>enable.ssl.certificate.verification</code>, <code>ssl.endpoint.identification.algorithm</code>, <code>debug</code>, <code>statistics.interval.ms</code>). Credentials are yours: TLS material inline as <code>ssl.ca.pem</code> and friends through <code>config</code>/<code>secretFrom</code>, never as file paths. An operator who needs a host-only key sets it in <code>kafka.yaml</code>.</li>
+        <li><b>One spelling per setting.</b> librdkafka alias pairs (<code>metadata.broker.list</code> = <code>bootstrap.servers</code>, …) are folded to one spelling per config source before the layers merge, so an alias cannot dodge a rule; an all-caps <code>secretFrom</code> key like <code>SASL_PASSWORD</code> arrives as <code>sasl.password</code>.</li>
+        <li><b>The machine egress allow-list.</b> Where the enterprise machine layer sets one, every broker a binding would dial — its own or an inherited default — must be on it, matched the way <code>allowedHosts</code> entries match (port 9092 when an entry names none). No floor, no check.</li>
+        <li><b>Several Kafkas from one workload:</b> one <code>cosmonic:kafka</code> entry per <code>(implements &lt;name&gt;)</code> label, each with its own <code>name</code>, broker, credential and grant. The dev loop and <code>/v1/synthesize</code> infer one named entry per label from the component's world.</li>
+        <li><b>A refusal at apply</b> (host-only key, off-allow-list broker) is a 400 whose sentence names the key, never a value — <code>cosmonic_workload_validate</code> says the same. <b>A refusal at bind</b> (no broker anywhere, a grant that misses the subscription or DLQ, a missing group id) fails the start permanently: Failed, no retry; fix and re-apply. <code>requires cosmonic:kafka which this host does not provide</code> means a daemon built without the <code>kafka</code> feature.</li>
+      </ul>
+    </div>
+
+    <h3>Rules that keep it running</h3>
+    <div class="prose">
+      <ul>
+        <li><b>Scaling</b> = partitions × replicas, for handlers and pull services alike. Per replica a handler's useful concurrency is <code>min(assigned partitions, 64, poolSize × maxConcurrency)</code>; growing the pool adds no group member and moves no partition — the host keeps the native consumer, connection and membership alive while guest instances come and go. Keep <code>maxConcurrency: 1</code> unless the handler is safe under overlapping calls on one instance. Add <code>replicas</code> for availability or more group members.</li>
+        <li><b>A slow handler wants <code>max.poll.interval.ms</code>, not a smaller pool.</b> The per-call deadline derives from it (the interval less a minute — ten minutes by default) and covers the whole batch; the host serves the group's poll timer independently.</li>
+        <li><b>Rebalancing is <code>cooperative-sticky</code></b> by default; every member of a group must agree, so never mix strategies across deployments sharing a <code>handler.group.id</code>.</li>
+        <li><b>Throughput vs latency in a service</b> is <code>BATCH_SIZE</code>. Per-record send+await is a broker round trip each (~126 records/s measured); batches of 100 move thousands per second; <code>send-batch</code> of ~100 → 3,300–5,000 records/s, of 500 → 30,000+. Raise it only for a steady stream.</li>
+        <li><b>Never drain an unbounded <code>records()</code> stream inside one request-scoped call</b> — it stalls silently past ~10–12k records. <code>records()</code> is callable once per consumer, and reading it is what keeps the group heartbeat alive.</li>
+        <li><b>Read the <code>error</code> record, not just <code>code</code>:</b> <code>retriable</code> says retry; <code>fatal</code> on the producer means the host retires the native client (a consumer must be closed and reopened); <code>txn-requires-abort</code> means abort the transaction and reprocess. <code>not-leader-for-partition</code> is "refresh metadata and retry", not "give up".</li>
+        <li><b>After a broker restart that changed its identity</b> expect minutes of silent no-delivery, then automatic recovery (10 s backoff loop) — alert on consumer lag, send a probe record before trusting the pipeline.</li>
+        <li><b>Handler pitfalls:</b> keeping required state in the instance (calls land on different instances; idle ones are reclaimed — package-level state is a cache, never isolation); leaving the DLQ or an output topic out of <code>topics</code>; a second component exporting <code>handler</code> in the same workload (refused — they would split one group). <b>Measured</b> (0.3.0 campaign, dispatch unchanged): ceiling &gt; 11,000 records/s on one Rust component; 300 records/s soak at 6 ms median, 57 ms p99, zero loss; <code>replicas</code> 1 → 2 ≈ 1.6× on one node; driver trace logging raised p99 ~20×.</li>
+      </ul>
+    </div>
+
+    <h3>Operational limits (the plugin's own ceilings)</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Resource</th><th>Limit</th></tr></thead>
+        <tbody>
+          <tr><td>Clients per component (<code>consumer.open()</code> sessions, binding-scoped producers)</td><td class="num">64 — then <code>CritSysResource</code></td></tr>
+          <tr><td>Handler calls in flight per component</td><td class="num">64, across every assigned partition</td></tr>
+          <tr><td>Handler batch</td><td class="num">100 records by default; <code>handler.batch.size</code> 1–10,000; ~1 MiB per call</td></tr>
+          <tr><td>Handler record buffers</td><td class="num">128 MiB shared across partitions</td></tr>
+          <tr><td>Pull-consumer read-ahead</td><td class="num">64 MiB and 512 records</td></tr>
+          <tr><td>Concurrent <code>send-stream</code> drains per component</td><td class="num">32</td></tr>
+          <tr><td><code>send-stream</code> buffer</td><td class="num">64 MiB and 256 records; ~1 MiB per record; 64 in flight</td></tr>
+          <tr><td>Producer queue</td><td class="num">32,768 KiB by default; buffer keys capped at 100 MiB</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Run and verify</h3>
+<pre><code># build + run the dev loop (the Builder's agent and `cosmonic dev` do the same); tail cosmonic_dev_logs
+cosmonic_dev_start
+
+# what the built component actually exports/imports — before writing the binding's `interfaces:` list
+wasm-tools component wit &lt;out&gt;.wasm | grep -E 'cosmonic:kafka/(handler|producer|consumer|transaction)@0.5.0'
+wasm-tools print &lt;out&gt;.wasm | grep -qE 'async-lift|task-return'
+
+# verify end to end, never from the host log alone
+rpk topic produce demo.events            # one probe record
+rpk group describe demo-events-handler   # lag == 0 is "caught up"; offsets that stopped moving prove nothing
+
+# publish: pushes to the built-in registry, returns a digest-pinned Workload carrying the binding
+cosmonic_project_publish → cosmonic_workload_apply</code></pre>
+  </section>
+
+  <!-- 8 DELTA -->
+  <section id="delta">
+    <div class="eyebrow">8 · What changed</div>
+    <h2>Deltas from the v1 plan (README @ 0.3.0) to the shipped 0.5.0 set</h2>
+    <p class="prose">What the skill and templates changed under the story, and what that changed in the story.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Then (README, <code>cosmonic:kafka@0.3.0</code>, wasmCloud 2.8)</th><th>Now (skill 1.2.0, templates @ f5326286, <code>cosmonic:kafka@0.5.0</code>, wasmCloud 2.9 / Control 0.11 / Desktop)</th><th>Effect on the story</th></tr></thead>
+        <tbody>
+          <tr><td>A handler must not produce; produce work goes to the pull service (client bootstrap per record ~1200× a dispatch)</td><td>The handler is the default and <b>can produce</b>: import <code>producer</code>, add the output to <code>topics</code>; the host reuses one binding-scoped producer across instances, no open</td><td>ST-02 now publishes <code>dieattach.flags</code> from the handler. ST-03 had to justify the pull service on session control (seek / pause / rebalances / own commits), not on "it produces"</td></tr>
+          <tr><td>Producer has <code>open</code>/<code>close</code>/<code>flush</code>; an open-per-request producer caps near ~10 req/s</td><td>Producer functions are free functions on the binding; no <code>open</code>; the ~10 req/s number is gone with it. <code>send-stream</code> added</td><td>ST-01 rationale rewritten around per-record outcomes in a batch rather than avoiding client churn</td></tr>
+          <tr><td>A pure handler needs no <code>topics</code> grant</td><td>A handler binding without <code>topics</code> is refused at bind; the grant must cover the subscription, the DLQ, and every produce target</td><td>Every manifest excerpt now lists the full grant; beat 2 shows the refusal</td></tr>
+          <tr><td>Handler instances: <code>poolSize</code> / <code>maxConcurrency</code> decide warm vs shared instances</td><td>Templates ship <code>poolSize: 32</code>, <code>maxConcurrency: 1</code>, <code>reclaimWindowSeconds: 30</code>, <code>reclaimMinInstances: 0</code>; useful concurrency = <code>min(assigned partitions, 64, pool × concurrency)</code>; pool growth adds no group member</td><td>The elastic story got sharper: the handler is already elastic <em>within</em> a replica; the two proposed variants add replica scaling (group membership) between min and max. The dashboard shows both dimensions</td></tr>
+          <tr><td>Transactional: pull service + transactions, one binding</td><td>Two bindings on one workload (<code>producer</code> and <code>transaction</code> refused together); <code>transactional.id</code> host-pinned and stable; <code>transaction.group.id</code> = the consumer's group; <b>keep <code>replicas: 1</code></b></td><td>ST-06 pinned at one replica and shown that way; the dashboard tracks <code>txn-requires-abort</code> / <code>fatal</code></td></tr>
+          <tr><td>Panics: "treat malformed input as permanent, never panic"</td><td>Same rule, now with the mechanism: a trap is transient; five consecutive traps on one record dead-letter it; the partition makes no progress until then</td><td>Beat 4 shows both paths side by side</td></tr>
+          <tr><td>Operator route: Control plugin <code>bindings</code> by label, <code>hostOwnedKeys</code>, <code>workloadConfig: deny</code></td><td>On Desktop the same idea is <code>kafka.yaml</code>: a base the manifest overrides key by key; Desktop's set runs <code>allow</code> and refuses host-only keys and off-allow-list brokers itself, at apply</td><td>Beat 2 now runs on Desktop's guard and <code>cosmonic_workload_validate</code>; station manifests omit <code>bootstrap.servers</code> to inherit the default</td></tr>
+          <tr><td>Services: batching via <code>send-batch</code>, no env contract stated</td><td>Env contract <code>IN_TOPIC</code> / <code>OUT_TOPIC</code> / <code>DLQ_TOPIC</code> / <code>BATCH_SIZE</code> (default 1, capped at 100, no batch timer) via <code>localResources.environment.config</code>; ~126 records/s per-record</td><td>ST-03 and ST-06 panels show <code>BATCH_SIZE</code>; both set it to 100</td></tr>
+          <tr><td>Verify from logs</td><td>Verify end to end: probe record, read the output/DLQ, and the group's lag via <code>rpk group describe</code>; <code>wasm-tools</code> checks for exports and async lifts</td><td><code>/validate</code> now reports lag per group; the environment table lists the <code>wasm-tools</code> check</td></tr>
+          <tr><td>Broker restart: lag climbs and drains</td><td>After a restart that changed the broker's identity, minutes of silent no-delivery, then automatic recovery on a 10 s backoff</td><td>Beat 6 sets that expectation and proves recovery with a probe record</td></tr>
+          <tr><td>Template names <code>http-kafka-producer</code>, <code>kafka-handler-consumer</code>, …; <code>wash new --subfolder</code></td><td>Desktop ids <code>rust-kafka-http-producer</code>, <code>rust-kafka-handler-consumer</code>, <code>rust-kafka-pull-service</code>, <code>rust-kafka-transactional</code> via <code>cosmonic_project_create</code> / <code>cosmonic new</code>; the Builder's "Kafka streaming" family</td><td>All labels updated; the demo scaffolds from the Builder</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 9 REPOSITORY -->
+  <section id="repo">
+    <div class="eyebrow">9 · Repository</div>
+    <h2>cosmonic-labs/factory-fab-assembly-line</h2>
+    <p class="prose">The runnable form of this document: one repo, one <code>make up</code>, on a laptop with Cosmonic Desktop and Docker. The full build brief for the coding agent is <code>PLAN.md</code> in the repo root; this section is the shape of it.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Part</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td><code>workloads/st01…st06</code></td><td>The six stations, each scaffolded from its <code>rust-kafka-*</code> starter and rewritten for the station. ST-04 is the shipped handler at <code>handler.batch.size: 1</code>; ST-05 stands in for the proposed stream processor with a 1,000-record batch as its window. Plus <code>st02-die-attach-naive</code> (the panicking build for beat 4) and <code>st06-final-test-twin</code> (the non-transactional ledger for beat 6).</td></tr>
+          <tr><td><code>workloads/factory-simulator</code></td><td>What sends the test messages, and it runs on its own: a <code>wasi:cli/run</code> service (pull-service shape, plus <code>wasi:clocks</code> for the 1-second tick) that loops static, committed scenario frames onto the input topics with <code>send_batch</code>. It is driven over a Kafka topic, <code>sim.control</code>, so the demo is one script: <code>sim.sh start</code> begins the baseline loop and leaves it running; <code>shift-change</code> switches the loop and returns to baseline by itself; <code>poison</code>, <code>drift</code>, <code>excursion</code> are one-shot overlays on top of the loop; <code>calm</code> and <code>stop</code> do what they say. Each maps to one demo beat in section 5.</td></tr>
+          <tr><td><code>workloads/line-dashboard</code></td><td>The page in section 6, live: an HTTP handler serving it plus a <code>cosmonic:kafka</code> handler folding <code>line.metrics</code>, the one topic every station and the simulator report into. Icons and palette from <code>docs/icons.svg</code> and this document, unchanged.</td></tr>
+          <tr><td><code>scripts/run.sh</code></td><td>Bring-up and validation, idempotent, loading workloads with the Control <code>cosmo</code> CLI pointed at the local Desktop host: preflight (<code>cosmo</code>, <code>cosmonic</code>, <code>wasm32-wasip2</code>, <code>wasm-tools</code>, Docker) → host reachable → Kafka plugin in this build → Redpanda up via compose → topics created and verified with the partition counts in section 5 → Desktop can dial the broker (the daemon's <code>POST /v1/kafka/test</code> probe) → build, <code>wasm-tools</code> checks, <code>cosmonic publish</code> → validate → <code>cosmo</code> apply and wait for <code>running</code> → <code>sim.sh start</code>, then check produced == consumed + DLQ and lag 0 on every group → print the dashboard URL, the <code>sim.sh</code> verbs and the demo beats. Where <code>cosmo</code> lacks a verb against Desktop, the daemon's socket API is the documented fallback for that verb only.</td></tr>
+          <tr><td><code>manifests/</code></td><td>The digest-pinned Workload per station that <code>cosmonic publish</code> printed, committed so <code>run.sh --no-build</code> works without a Rust toolchain. Manifests carry <code>bootstrap.servers: 127.0.0.1:9092</code> like the shipped scaffolds; <code>--use-kafka-yaml</code> moves the broker into Desktop's <code>kafka.yaml</code> default instead (needs a daemon restart).</td></tr>
+          <tr><td><code>docs/</code></td><td>This document as <code>design.html</code>, the icon library as <code>icons.svg</code>, and <code>DECISIONS.md</code> for every deviation the agent makes.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note prose"><b>Live vs mocked on Desktop.</b> Six stations, simulator, dashboard, DLQs, transactions, the twin ledger and lag are live. Handler instances 0→32 are live, counted from per-instance heartbeats on <code>line.metrics</code>. The replica min/max window is drawn static with a "Control only" label — replica scaling is a Control concept and the <code>scaling:</code> block a proposal. ST-05's windowed state is approximated per batch until a stream-handler export exists.</div>
+  </section>
+</div>
+
+<script>
+(function () {
+  // 40-bonder heat strip: NSOP rate per bonder, bonder 17 hot.
+  var hs = document.getElementById('hs');
+  if (hs) {
+    var svgns = 'http://www.w3.org/2000/svg';
+    for (var i = 0; i < 40; i++) {
+      var col = i % 20, row = Math.floor(i / 20);
+      var v = (i === 16) ? 1.9 : (i === 5 || i === 31) ? 0.35 : 0.05 + ((i * 7) % 5) * 0.03;
+      var r = document.createElementNS(svgns, 'rect');
+      r.setAttribute('x', col * 10 + 1); r.setAttribute('y', row * 24 + 4);
+      r.setAttribute('width', 8); r.setAttribute('height', 20); r.setAttribute('rx', 1);
+      r.setAttribute('fill', v > 1 ? 'var(--crit)' : v > 0.3 ? 'var(--warn)' : 'var(--good)');
+      r.setAttribute('opacity', v > 1 ? 1 : v > 0.3 ? 0.9 : 0.35 + v);
+      var t = document.createElementNS(svgns, 'title');
+      t.textContent = 'bonder ' + (i + 1) + ' · NSOP ' + v.toFixed(2) + '%';
+      r.appendChild(t); hs.appendChild(r);
+    }
+  }
+  // 8 oven zones against profile band
+  var z = document.getElementById('zones');
+  if (z) {
+    var svgns2 = 'http://www.w3.org/2000/svg';
+    var band = document.createElementNS(svgns2, 'rect');
+    band.setAttribute('x', 0); band.setAttribute('y', 18); band.setAttribute('width', 200); band.setAttribute('height', 14);
+    band.setAttribute('fill', 'var(--good-soft)'); z.appendChild(band);
+    var temps = [175, 176, 175, 174, 179.2, 175, 176, 175]; // zone 5 drifting
+    for (var j = 0; j < 8; j++) {
+      var y = 25 - (temps[j] - 175) * 3;
+      var b = document.createElementNS(svgns2, 'rect');
+      b.setAttribute('x', j * 25 + 6); b.setAttribute('y', Math.min(y, 25)); b.setAttribute('width', 13); b.setAttribute('height', Math.abs(25 - y) + 2); b.setAttribute('rx', 1);
+      b.setAttribute('fill', Math.abs(temps[j] - 175) > 2 ? 'var(--warn)' : 'var(--accent)');
+      z.appendChild(b);
+      var l = document.createElementNS(svgns2, 'text');
+      l.setAttribute('x', j * 25 + 6); l.setAttribute('y', 52); l.setAttribute('font-size', 7); l.setAttribute('fill', 'var(--ink-3)');
+      l.textContent = 'Z' + (j + 1); z.appendChild(l);
+    }
+    var lbl = document.createElementNS(svgns2, 'text');
+    lbl.setAttribute('x', 2); lbl.setAttribute('y', 10); lbl.setAttribute('font-size', 7); lbl.setAttribute('fill', 'var(--ink-3)');
+    lbl.textContent = 'profile 175 ±2 °C'; z.appendChild(lbl);
+  }
+})();
+</script></body></html>

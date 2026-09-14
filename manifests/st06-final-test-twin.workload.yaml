@@ -1,0 +1,43 @@
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+metadata:
+  name: "st06-final-test-twin"
+  namespace: default
+spec:
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [consumer, producer]
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        # Grant every topic the service touches: input, the twin ledger, metrics.
+        topics: "finaltest.bins,lot.disposition.twin,inventory.moves.twin,line.metrics"
+        consumer.group.id: "st06-final-test-twin"
+        auto.offset.reset: earliest
+        enable.auto.commit: "false"
+  # A wasi:cli/run component runs as the workload's long-running service
+  # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
+  service:
+    name: final-test-twin
+    image: oci.localhost:8200/apps/st06-final-test-twin:0.1.0@sha256:9ed5111a886e512ce30b1d724a400ce2d2bd00251c1fea0365c744bc73ed19a5
+    maxRestarts: 100
+    localResources:
+      environment:
+        config:
+          IN_TOPIC: finaltest.bins
+          OUT_TOPIC: lot.disposition.twin
+          MOVES_TOPIC: inventory.moves.twin
+          BATCH_SIZE: "100"
+          # Commit only every 5 batches: the at-least-once replay window the
+          # broker-restart beat makes visible.
+          COMMIT_EVERY: "5"
+      allowedHosts: []
+  # Desktop's Workload schema requires at least one component; this entry is
+  # never invoked (the service above is what runs).
+  components:
+    - name: final-test-twin
+      image: oci.localhost:8200/apps/st06-final-test-twin:0.1.0@sha256:9ed5111a886e512ce30b1d724a400ce2d2bd00251c1fea0365c744bc73ed19a5
+      localResources:
+        allowedHosts: []

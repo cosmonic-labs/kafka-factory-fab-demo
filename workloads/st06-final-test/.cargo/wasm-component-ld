@@ -1,0 +1,30 @@
+#!/bin/sh
+# Linker shim for this crate (see .cargo/config.toml).
+#
+# rustc prepends its own sysroot `bin/` to PATH when it spawns the wasm32-wasip2
+# linker, so the wasm-component-ld bundled with the toolchain (0.5.20-0.5.22 on
+# Rust 1.94-1.97) always wins over a newer one on PATH. This crate's world has a
+# NAMED import (`import transaction: cosmonic:kafka/transaction@0.5.0`) whose
+# wit-bindgen 0.58 encoding needs wasm-component-ld >= 0.5.27, or the link
+# fails with "invalid leading byte (0x2) for import name". Find the newer one
+# on the user's PATH (`cargo install wasm-component-ld`) and run it, pointing
+# it at the toolchain's own wasm-ld.
+user_path=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v '/rustlib/' | paste -sd: -)
+ld=$(PATH="$user_path" command -v wasm-component-ld 2>/dev/null)
+if [ -z "$ld" ]; then
+  echo "wasm-component-ld >= 0.5.27 is required on PATH: cargo install wasm-component-ld" >&2
+  exit 1
+fi
+wasm_ld=$(command -v wasm-ld 2>/dev/null)
+for d in $(printf '%s' "$PATH" | tr ':' '\n' | grep '/rustlib/'); do
+  [ -x "$d/gcc-ld/wasm-ld" ] && wasm_ld="$d/gcc-ld/wasm-ld" && break
+done
+if [ -z "$wasm_ld" ]; then
+  exec "$ld" "$@"
+fi
+# `-flavor wasm` must stay the first pair of arguments.
+if [ "$1" = "-flavor" ]; then
+  flavor="$2"; shift 2
+  exec "$ld" -flavor "$flavor" --wasm-ld-path "$wasm_ld" "$@"
+fi
+exec "$ld" --wasm-ld-path "$wasm_ld" "$@"

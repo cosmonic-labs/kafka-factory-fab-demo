@@ -1,0 +1,34 @@
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: WorkloadDeployment
+metadata:
+  name: "st03-wire-bond"
+  namespace: default
+spec:
+  replicas: 1
+  template:
+    spec:
+      service:
+        # Prebuilt from this template; swap for your own registry once you
+        # change the source. Pin a `sha-<commit>` tag if you need one image.
+        image: ghcr.io/cosmonic-labs/kafka-templates/kafka-pull-service:latest
+        maxRestarts: 100
+        localResources:
+          environment:
+            config:
+              IN_TOPIC: wirebond.raw
+              OUT_TOPIC: wirebond.metrics
+              DLQ_TOPIC: wirebond.dlq
+              BATCH_SIZE: "100"
+              NSOP_THRESHOLD_PCT: "15"
+      hostInterfaces:
+        - namespace: cosmonic
+          package: kafka
+          version: 0.5.0
+          interfaces: [consumer, producer]
+          config:
+            bootstrap.servers: my-kafka.kafka.svc.cluster.local:9092
+            broker.address.family: v4
+            topics: "wirebond.raw,wirebond.metrics,wirebond.dlq,line.metrics"
+            consumer.group.id: "st03-wire-bond"
+            auto.offset.reset: earliest
+            enable.auto.commit: "false"

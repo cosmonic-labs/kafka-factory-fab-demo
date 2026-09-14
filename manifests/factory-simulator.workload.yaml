@@ -1,0 +1,35 @@
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+metadata:
+  name: "factory-simulator"
+  namespace: default
+spec:
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [consumer, producer]
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        # Grant: the control topic it consumes, every input topic it plays
+        # onto, and line.metrics for its produced counts and heartbeat.
+        topics: "sim.control,probe.lots,dieattach.readings,wirebond.raw,inspect.jobs,mold.telemetry,finaltest.bins,line.metrics"
+        consumer.group.id: "factory-simulator"
+        auto.offset.reset: latest
+        enable.auto.commit: "false"
+  # A wasi:cli/run component runs as the workload's long-running service
+  # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
+  service:
+    name: simulator
+    image: oci.localhost:8200/apps/factory-simulator:0.1.0@sha256:f934901eb5493ab977124c0c03c77e3df78dcbb8d2cf5715fd0161f12368f66c
+    maxRestarts: 100
+    localResources:
+      allowedHosts: []
+  # Desktop's Workload schema requires at least one component; this entry is
+  # never invoked (the service above is what runs).
+  components:
+    - name: simulator
+      image: oci.localhost:8200/apps/factory-simulator:0.1.0@sha256:f934901eb5493ab977124c0c03c77e3df78dcbb8d2cf5715fd0161f12368f66c
+      localResources:
+        allowedHosts: []

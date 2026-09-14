@@ -1,0 +1,32 @@
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+metadata:
+  name: "st02-die-attach"
+  namespace: default
+spec:
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [handler, producer]
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        # The host subscribes to and dispatches this topic.
+        handler.topics: "dieattach.readings"
+        # The GRANT: the subscription, the DLQ, and every produce target.
+        topics: "dieattach.readings,dieattach.dlq,dieattach.flags,line.metrics"
+        # This stable group resumes offsets across redeploys.
+        handler.group.id: "st02-die-attach"
+        auto.offset.reset: earliest
+        dead-letter.topic: "dieattach.dlq"
+  components:
+    - name: processor
+      image: oci.localhost:8200/apps/st02-die-attach:0.1.0
+      # Instances scale with assigned partition work and return to zero.
+      poolSize: 32
+      maxConcurrency: 1
+      reclaimWindowSeconds: 30
+      reclaimMinInstances: 0
+      localResources:
+        allowedHosts: []

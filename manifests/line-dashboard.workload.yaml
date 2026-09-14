@@ -1,0 +1,45 @@
+# Reach it at http://line-dashboard.localhost:8200/
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+metadata:
+  name: "line-dashboard"
+  namespace: default
+spec:
+  hostInterfaces:
+    - namespace: wasi
+      package: http
+      # This component exports P3 wasi:http/handler@0.3.0 — bind "handler".
+      interfaces: [handler]
+      config:
+        host: "line-dashboard.localhost"
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [handler]
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        # The subscription: line.metrics, the DLQs it counts, the two ledgers.
+        handler.topics: "line.metrics,dieattach.dlq,wirebond.dlq,inspect.dlq,mold.dlq,lot.disposition,lot.disposition.twin"
+        # The GRANT: every subscription plus this handler's own DLQ.
+        topics: "line.metrics,line.metrics.dlq,dieattach.dlq,wirebond.dlq,inspect.dlq,mold.dlq,lot.disposition,lot.disposition.twin"
+        handler.group.id: "line-dashboard"
+        auto.offset.reset: earliest
+        dead-letter.topic: "line.metrics.dlq"
+        # Tape & Reel reads the transactional ledger read_committed; so does this.
+        isolation.level: read_committed
+  components:
+    - name: dashboard
+      image: oci.localhost:8200/apps/line-dashboard:0.1.0@sha256:ac8a577ccaa2edc14ef38b85ea20b8f718deb4260274c9c62fdfb09863560b0c
+      # One warm instance serves both the HTTP page and the Kafka handler, so
+      # the fold lives in its memory. maxConcurrency must cover every call
+      # that can be in flight at once (13 partition loops + HTTP polls): a
+      # call that finds the pool busy and full runs on a throwaway store and
+      # its fold is lost. The handler holds no borrow across an await, so
+      # overlapping calls on one instance are safe. Never reclaimed.
+      poolSize: 1
+      maxConcurrency: 64
+      reclaimWindowSeconds: 0
+      reclaimMinInstances: 1
+      localResources:
+        allowedHosts: []

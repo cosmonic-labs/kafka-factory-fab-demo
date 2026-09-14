@@ -1,0 +1,31 @@
+# Reach it at http://st01-probe-intake.localhost:8200/
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+metadata:
+  name: "st01-probe-intake"
+  namespace: default
+spec:
+  hostInterfaces:
+    - namespace: wasi
+      package: http
+      # This component exports P3 wasi:http/handler@0.3.0 — bind "handler",
+      # which is also what makes poolSize/maxConcurrency effective.
+      interfaces: [handler]
+      config:
+        host: "st01-probe-intake.localhost"
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [producer]
+      config:
+        # The binding fixes the producer's connection and policy.
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        # Grant: which topics this workload may produce to.
+        topics: "probe.lots,line.metrics"
+  components:
+    - name: intake
+      image: oci.localhost:8200/apps/st01-probe-intake:0.1.0
+      poolSize: 4
+      localResources:
+        allowedHosts: []

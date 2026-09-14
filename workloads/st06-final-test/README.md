@@ -1,0 +1,99 @@
+# st06-final-test — Kafka Transactional Pipeline (Rust)
+
+Vendored from the `kafka-transactional` golden template in [cosmonic-labs/awesome-cosmonic](https://github.com/cosmonic-labs/awesome-cosmonic/blob/main/components/kafka/README.md)
+(`components/kafka` @ f5326286); its README says when to choose this
+pattern over the other three.
+
+## Run it on Cosmonic Desktop
+
+This is a Cosmonic Desktop project: `.wash/config.yaml` carries the build
+command and, under `workload.hostInterfaces`, the same `cosmonic:kafka`
+binding as `workload.yaml`. The Builder's agent, `cosmonic dev`, or the
+`cosmonic_dev_start` MCP tool builds it (`cargo build --target wasm32-wasip2
+--release`), runs it, and hot-restarts it on every save. `cosmonic publish` /
+`cosmonic_project_publish` then pushes the component to the built-in registry
+and prints a durable Workload draft that carries the binding.
+
+> **Host support.** The binding needs the `cosmonic:kafka` plugin in the
+> host: Cosmonic Control ships it, and Cosmonic Desktop compiles in the same
+> plugin. On Desktop a binding's broker is pinned before the component runs:
+> this manifest's `bootstrap.servers`, which overrides any default in the
+> host's `kafka.yaml` (drop it to inherit that default instead); a binding
+> with a broker from neither is refused. The Kubernetes manifest in `deploy/`
+> runs on Control as it is.
+
+The broker, the topic grant and the handler keys live in the workload's own
+`cosmonic:kafka` entry (the manifests here show `127.0.0.1:9092`); the
+component never sees a broker address in its code. Credentials go through
+`secretFrom`, never inline: on Desktop a secret ref's key is an env-var name,
+so register it as `SASL_PASSWORD` and the binding receives `sasl.password`.
+`wit/deps/` ships with the scaffold, so a build
+needs no registry access; to re-fetch it after bumping `wkg.lock`:
+`WKG_CONFIG_FILE=./wkg-registries.toml wash wit fetch`.
+
+A local Kafka for this template, once (any broker on `127.0.0.1:9092`; the
+topics the manifest names):
+
+```bash
+kafka-topics --bootstrap-server 127.0.0.1:9092 --create --if-not-exists --topic demo.events
+kafka-topics --bootstrap-server 127.0.0.1:9092 --create --if-not-exists --topic demo.enriched
+```
+
+## Build by hand
+
+Prereqs: Rust 1.85+ with the `wasm32-wasip2` target (the one Cosmonic
+Desktop's Preflight doctor provisions).
+
+```sh
+cargo build --target wasm32-wasip2 --release
+# component: target/wasm32-wasip2/release/st06_final_test.wasm
+```
+
+`.wash/config.yaml` names that command and where its output lands, which is
+what lets Desktop's dev loop and `wash build` find the artifact without being
+told. The `cosmonic:kafka@0.5.0` WIT under `wit/deps/` is pinned by
+`wkg.lock`; `wkg-registries.toml` maps the `cosmonic` namespace to the
+registry that serves it, should you need to fetch it again.
+
+## Deploy
+
+- **Cosmonic Desktop**: submit `workload.yaml` through its workload API or MCP
+  integration.
+- **Kubernetes** (wasmCloud runtime-operator / Cosmonic Control): run
+  `kubectl apply -f deploy/workload-deployment.yaml`.
+
+Both point at the component published from this template. Set the broker,
+topic, group, transaction ID, and environment placeholders before applying a
+manifest. Once you change the source, build it, push it to your own registry,
+and replace the image reference.
+
+The broker address and topic names in the manifests are placeholders. The
+workload's `cosmonic:kafka` entry under `hostInterfaces` is where the
+connection lives — broker, credentials, groups, topic grants, and the
+`transactional.id` that fences a restarted producer. The component cannot
+supply or override these values. Use `secretFrom` for the credential rather
+than inlining it.
+
+See [the pattern guide](https://github.com/cosmonic-labs/awesome-cosmonic/blob/main/components/kafka/README.md#where-the-broker-and-credentials-are-configured)
+for binding and topic-grant rules.
+
+## Transaction binding
+
+The named `transaction` binding is separate from the pull-consumer binding.
+All transactional sends and `send-offsets` calls run through the resource
+returned by `transaction::begin()`. Configure credentials on both bindings.
+The consumer grant needs the input topic; the transaction grant needs both the
+output topic and every input topic whose offsets it enlists.
+
+The checked-in manifests are intentionally single-replica. Do not scale one
+unchanged manifest above one replica: each simultaneously live transaction
+producer needs a distinct, stable `transactional.id`.
+
+`BATCH_SIZE` defaults to 1 for bounded latency. A value above 1 waits until
+that many records arrive or the record stream ends; this template has no batch
+timer, and values are capped at 100. Increase it only for a steady stream.
+
+Any failed delivery or offset enlistment aborts the transaction and exits the
+Service. The supervisor then restarts it from the last atomically committed
+consumer position. Downstream consumers must use `isolation.level=read_committed`
+to hide aborted output.

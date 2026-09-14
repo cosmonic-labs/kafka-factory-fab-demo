@@ -1,0 +1,9 @@
+package cosmonic-templates:kafka-handler-consumer;
+
+// The host owns the consumer and dispatches partition-ordered batches to an
+// elastic component pool. st04-inspection also produces (its results and its
+// line.metrics records) through the binding's host-owned producer.
+world kafka-handler-consumer {
+    import cosmonic:kafka/producer@0.5.0;
+    export cosmonic:kafka/handler@0.5.0;
+}

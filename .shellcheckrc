@@ -1,0 +1,4 @@
+# scripts/*.sh source lib.sh relative to themselves.
+source-path=SCRIPTDIR
+# Variables in lib.sh are used by the scripts that source it.
+disable=SC2034

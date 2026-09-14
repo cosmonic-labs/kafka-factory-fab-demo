@@ -1,0 +1,11 @@
+package cosmonic-templates:kafka-pull-service;
+
+// A long-running service owns the pull-consumer session. The host owns the
+// binding-scoped producer.
+//
+// `std::env` supplies environment variables without a second wasi:cli version.
+world kafka-pull-service {
+    import cosmonic:kafka/consumer@0.5.0;
+    import cosmonic:kafka/producer@0.5.0;
+    export wasi:cli/run@0.3.0;
+}

@@ -1,0 +1,26 @@
+build:
+  # wasm32-wasip2 is required: `cosmonic:kafka@0.5.0`'s functions are all
+  # `async func`, which needs the p3 bindings wit-bindgen generates on top of
+  # a p2 core module.
+  command: cargo build --target wasm32-wasip2 --release
+  component_path: target/wasm32-wasip2/release/st02_die_attach.wasm
+
+# ST-02's binding: the handler subscription, the grant (subscription + DLQ +
+# the flags it produces + line.metrics), the required group id and DLQ.
+workload:
+  allowedHosts: []
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: "0.5.0"
+      interfaces:
+        - handler
+        - producer
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        handler.topics: dieattach.readings
+        topics: dieattach.readings,dieattach.dlq,dieattach.flags,line.metrics
+        handler.group.id: st02-die-attach
+        auto.offset.reset: earliest
+        dead-letter.topic: dieattach.dlq

@@ -1,0 +1,43 @@
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+metadata:
+  name: "st03-wire-bond"
+  namespace: default
+spec:
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [consumer, producer]
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        # Grant every topic the service touches: input, output, DLQ, metrics.
+        topics: "wirebond.raw,wirebond.metrics,wirebond.dlq,line.metrics"
+        consumer.group.id: "st03-wire-bond"
+        auto.offset.reset: earliest
+        enable.auto.commit: "false"
+  # A wasi:cli/run component runs as the workload's long-running service
+  # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
+  service:
+    name: wire-bond
+    image: oci.localhost:8200/apps/st03-wire-bond:0.1.0@sha256:45850b7b39c2fa052c1730b47ce55474aa85294af27315948db7c03afb1e8f05
+    maxRestarts: 100
+    localResources:
+      environment:
+        config:
+          IN_TOPIC: wirebond.raw
+          OUT_TOPIC: wirebond.metrics
+          DLQ_TOPIC: wirebond.dlq
+          BATCH_SIZE: "100"
+          # Beat 7: re-publish with a tighter value and the stable group
+          # resumes where the old instance stopped.
+          NSOP_THRESHOLD_PCT: "15"
+      allowedHosts: []
+  # Desktop's Workload schema requires at least one component; this entry is
+  # never invoked (the service above is what runs).
+  components:
+    - name: wire-bond
+      image: oci.localhost:8200/apps/st03-wire-bond:0.1.0@sha256:45850b7b39c2fa052c1730b47ce55474aa85294af27315948db7c03afb1e8f05
+      localResources:
+        allowedHosts: []

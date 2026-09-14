@@ -1,0 +1,11 @@
+[build]
+target = "wasm32-wasip2"
+
+# wit-bindgen 0.58's encoded world for a NAMED import (`import transaction:
+# cosmonic:kafka/transaction@0.5.0`) needs wasm-component-ld >= 0.5.27; the copy
+# bundled with Rust 1.94-1.97 refuses it ("invalid leading byte (0x2) for
+# import name") and rustc prefers that copy over PATH. The shim beside this
+# file runs the one on PATH (`cargo install wasm-component-ld`; scripts/run.sh
+# checks the version). The path is resolved relative to the project directory.
+[target.wasm32-wasip2]
+linker = ".cargo/wasm-component-ld"

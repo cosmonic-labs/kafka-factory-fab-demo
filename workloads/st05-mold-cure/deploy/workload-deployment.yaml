@@ -1,0 +1,39 @@
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: WorkloadDeployment
+metadata:
+  name: "st05-mold-cure"
+  namespace: default
+spec:
+  replicas: 1
+  template:
+    spec:
+      components:
+        - name: processor
+          # Prebuilt from this template; swap for your own registry once you
+          # change the source. Pin a `sha-<commit>` tag if you need one image.
+          image: ghcr.io/cosmonic-labs/kafka-templates/kafka-handler-consumer:latest
+          # Instances scale with assigned partition work and return to zero.
+          poolSize: 32
+          maxConcurrency: 1
+          reclaimWindowSeconds: 30
+          reclaimMinInstances: 0
+      hostInterfaces:
+        - namespace: cosmonic
+          package: kafka
+          version: 0.5.0
+          interfaces: [handler, producer]
+          config:
+            bootstrap.servers: 127.0.0.1:9092
+            broker.address.family: v4
+            # The host subscribes to and dispatches this topic.
+            handler.topics: "mold.telemetry"
+            # The GRANT: the subscription, the DLQ, and every produce target.
+            topics: "mold.telemetry,mold.dlq,mold.profile,line.metrics"
+            # This stable group resumes offsets across redeploys.
+            handler.group.id: "st05-mold-cure"
+            auto.offset.reset: earliest
+            dead-letter.topic: "mold.dlq"
+            # One batch of one partition is one window (the stream-processor stand-in).
+            handler.batch.size: "1000"
+            # A long window wants the poll interval, not a smaller pool.
+            max.poll.interval.ms: "900000"

@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fab 3 Line</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Palette, fonts and panel layout: docs/design.html section 6, verbatim. */
+  :root {
+    --ground: #F2F4F1; --surface: #FAFBF9; --surface-2: #E7EBE7;
+    --line: #CBD2CC; --line-strong: #9AA59D;
+    --ink: #1B2320; --ink-2: #4B5651; --ink-3: #75817A;
+    --accent: #1E6A85; --accent-ink: #FFFFFF; --accent-soft: #D9E8EE;
+    --copper: #B8862B; --copper-soft: #F1E6CC;
+    --good: #2A7A4B; --good-soft: #D8EBDF;
+    --warn: #C6801A; --warn-soft: #F5E6CC;
+    --crit: #B23A2C; --crit-soft: #F3D9D5;
+    --code-bg: #E9EDE9;
+    --shadow: 0 1px 2px rgba(27,35,32,.08);
+    --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #131A1B; --surface: #1A2224; --surface-2: #222C2E;
+      --line: #2F3B3D; --line-strong: #4C5B5E;
+      --ink: #E6EBE8; --ink-2: #B5BFBA; --ink-3: #8B9791;
+      --accent: #5FB2D3; --accent-ink: #0E1A20; --accent-soft: #1B3540;
+      --copper: #D6A94A; --copper-soft: #3A3016;
+      --good: #63C48A; --good-soft: #1B3527;
+      --warn: #E4A63B; --warn-soft: #3C2E12;
+      --crit: #E9705F; --crit-soft: #401F1B;
+      --code-bg: #0F1516;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #131A1B; --surface: #1A2224; --surface-2: #222C2E;
+    --line: #2F3B3D; --line-strong: #4C5B5E;
+    --ink: #E6EBE8; --ink-2: #B5BFBA; --ink-3: #8B9791;
+    --accent: #5FB2D3; --accent-ink: #0E1A20; --accent-soft: #1B3540;
+    --copper: #D6A94A; --copper-soft: #3A3016;
+    --good: #63C48A; --good-soft: #1B3527;
+    --warn: #E4A63B; --warn-soft: #3C2E12;
+    --crit: #E9705F; --crit-soft: #401F1B;
+    --code-bg: #0F1516;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; padding-block: 16px 48px; padding-inline: clamp(16px, 3vw, 32px); }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .head h1 { font-family: var(--display); font-size: 1.4rem; font-weight: 600; margin: 0; }
+  .eyebrow { font-family: var(--mono); font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+  .icons { position: absolute; width: 0; height: 0; overflow: hidden; }
+  .st-ico { width: 22px; height: 22px; vertical-align: -5px; margin-right: 6px; }
+
+  .dash { background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 8px; padding: 12px; margin: 10px 0 8px; display: grid; gap: 10px; font-family: var(--mono); }
+  .dash .bar { display:flex; justify-content: space-between; align-items:center; font-size: .72rem; color: var(--ink-3); padding: 2px 4px; gap: 8px; flex-wrap: wrap; }
+  .dash .bar .dot { display:inline-block; width: 8px; height: 8px; border-radius: 999px; background: var(--ink-3); margin: 0 4px; }
+  .dash .bar .dot.on { background: var(--good); }
+  .dash .bar .dot.off { background: var(--crit); }
+  .kpis { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 8px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; display:grid; gap: 2px; }
+  .kpi .l { font-size: .64rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  .kpi .v { font-family: var(--display); font-size: 1.35rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi .d { font-size: .66rem; color: var(--ink-3); }
+  .kpi .d.good { color: var(--good); } .kpi .d.warn { color: var(--warn); } .kpi .d.crit { color: var(--crit); }
+  .panels { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 10px; display:grid; gap: 8px; align-content: start; min-height: 190px; border-top: 3px solid var(--accent); }
+  .panel.new { border-top-color: var(--copper); }
+  .panel .ph { display:flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .panel .ph b { font-family: var(--display); font-size: .95rem; font-weight: 600; }
+  .panel .ph span { font-size: .62rem; color: var(--ink-3); text-align: right; }
+  .panel .rows { display:grid; gap: 4px; font-size: .7rem; color: var(--ink-2); }
+  .panel .rows div { display:flex; justify-content: space-between; gap: 8px; }
+  .panel .rows div em { font-style: normal; color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
+  .panel svg { width: 100%; height: 64px; display:block; }
+  .panel .fault { font-size: .66rem; padding: 3px 7px; border-radius: 3px; background: var(--warn-soft); color: var(--warn); overflow: hidden; text-overflow: ellipsis; }
+  .panel .fault.c { background: var(--crit-soft); color: var(--crit); }
+  .panel .fault.g { background: var(--good-soft); color: var(--good); }
+  .panel .fault.i { background: var(--accent-soft); color: var(--accent); }
+  .dash .ledger { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 10px; font-size: .7rem; display:grid; gap: 4px; }
+  .dash .ledger div { display:grid; grid-template-columns: 64px 130px 1fr 170px; gap: 8px; }
+  .dash .ledger .h { color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; font-size: .62rem; }
+  .scalebar { display:grid; gap: 3px; }
+  .scalebar .track { position: relative; height: 12px; background: var(--surface-2); border-radius: 999px; border: 1px solid var(--line); }
+  .scalebar .window { position:absolute; top:-1px; height: 12px; border-radius: 999px; background: var(--copper-soft); border: 1px solid var(--copper); }
+  .scalebar .now { position:absolute; top:-4px; width: 4px; height: 18px; background: var(--copper); border-radius: 2px; }
+  .scalebar .lbl { display:flex; justify-content: space-between; font-size: .62rem; color: var(--ink-3); }
+  .scalebar .lbl .co { color: var(--copper); }
+  .foot { font-family: var(--mono); font-size: .68rem; color: var(--ink-3); display:flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .foot a { color: var(--accent); }
+  @media (max-width: 860px) { .kpis { grid-template-columns: repeat(3, minmax(0,1fr)); } .panels { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 520px) { .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); } .panels { grid-template-columns: 1fr; } .dash .ledger div { grid-template-columns: 56px 1fr; } .dash .ledger div span:nth-child(3), .dash .ledger div span:nth-child(4){ grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+<div class="icons"><!--ICONS--></div>
+<div class="wrap">
+  <div class="head">
+    <div><div class="eyebrow">Meridian Semiconductor · Cosmonic Desktop · cosmonic:kafka@0.5.0</div><h1>Fab 3 back-end line</h1></div>
+    <div class="eyebrow" id="stamp">connecting…</div>
+  </div>
+
+  <div class="dash" aria-label="Fab 3 line dashboard">
+    <div class="bar"><span>MERIDIAN · FAB 3 · BACK-END LINE</span><span id="barr">broker 127.0.0.1:9092 <i class="dot" id="simdot"></i> simulator —</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">Line UPH</div><div class="v" id="k-uph">—</div><div class="d" id="k-uph-d">units dispositioned / hour</div></div>
+      <div class="kpi"><div class="l">First-pass yield</div><div class="v" id="k-yield">—</div><div class="d" id="k-yield-d">bin 1 / all bins</div></div>
+      <div class="kpi"><div class="l">WIP lots</div><div class="v" id="k-lots">—</div><div class="d" id="k-lots-d">received at probe</div></div>
+      <div class="kpi"><div class="l">Open faults</div><div class="v" id="k-faults">—</div><div class="d" id="k-faults-d">—</div></div>
+      <div class="kpi"><div class="l">Total consumer lag</div><div class="v" id="k-lag">—</div><div class="d" id="k-lag-d">run make validate</div></div>
+      <div class="kpi"><div class="l">Replicas (elastic)</div><div class="v">1 + 1</div><div class="d">ST-04 · ST-05 · Control only</div></div>
+    </div>
+
+    <div class="panels">
+      <!-- ST-01 -->
+      <div class="panel" id="p-st01">
+        <div class="ph"><b><svg class="st-ico"><use href="#st-probe"/></svg>ST-01 Wafer probe intake</b><span>rust-kafka-http-producer<br>poolSize 4</span></div>
+        <div class="rows">
+          <div><span>Lots received / hr (last 60 min)</span><em id="s1-lots">—</em></div>
+          <div><span>Wafers / lot (avg)</span><em id="s1-wpl">—</em></div>
+          <div><span>Upload → ack p50 / p95</span><em id="s1-lat">—</em></div>
+          <div><span>Wafer records produced</span><em id="s1-prod">—</em></div>
+          <div><span>Per-record errors · rejected uploads</span><em id="s1-err">—</em></div>
+        </div>
+        <svg viewBox="0 0 200 56" aria-label="lots per minute, last 4 hours" id="c-st01"></svg>
+        <div class="fault g" id="f-st01">waiting for the first lot</div>
+      </div>
+      <!-- ST-02 -->
+      <div class="panel" id="p-st02">
+        <div class="ph"><b><svg class="st-ico"><use href="#st-die"/></svg>ST-02 Die attach</b><span>rust-kafka-handler-consumer + producer<br>group st02-die-attach</span></div>
+        <div class="rows">
+          <div><span>Readings / s · lag</span><em id="s2-rate">—</em></div>
+          <div><span>In-spec · flags produced</span><em id="s2-spec">—</em></div>
+          <div><span>Cpk (thickness), worst head</span><em id="s2-cpk">—</em></div>
+          <div><span>Live instances / 32</span><em id="s2-inst">—</em></div>
+          <div><span>DLQ · redeliveries · partial resumes</span><em id="s2-dlq">—</em></div>
+        </div>
+        <svg viewBox="0 0 200 56" aria-label="Cpk per head" id="c-st02"></svg>
+        <div class="fault g" id="f-st02">no faults</div>
+      </div>
+      <!-- ST-03 -->
+      <div class="panel" id="p-st03">
+        <div class="ph"><b><svg class="st-ico"><use href="#st-bond"/></svg>ST-03 Wire bond</b><span>rust-kafka-pull-service<br>group st03-wire-bond</span></div>
+        <div class="rows">
+          <div><span>Bonds / s · lag</span><em id="s3-rate">—</em></div>
+          <div><span>NSOP rate (windows)</span><em id="s3-nsop">—</em></div>
+          <div><span>Window · flushes · seeks · replayed</span><em id="s3-win">—</em></div>
+          <div><span>BATCH_SIZE · NSOP threshold · rebalances</span><em id="s3-cfg">—</em></div>
+          <div><span>Own DLQ (x-dlq-reason)</span><em id="s3-dlq">—</em></div>
+        </div>
+        <svg viewBox="0 0 200 56" aria-label="40-bonder heat strip" id="c-st03"></svg>
+        <div class="fault g" id="f-st03">no faults</div>
+      </div>
+      <!-- ST-04 -->
+      <div class="panel new" id="p-st04">
+        <div class="ph"><b><svg class="st-ico"><use href="#st-aoi"/></svg>ST-04 AOI &amp; X-ray</b><span>handler · batch.size 1 (work queue)<br>group st04-inspection</span></div>
+        <div class="rows">
+          <div><span>Jobs / min · lag</span><em id="s4-rate">—</em></div>
+          <div><span>Job latency p50 / p95</span><em id="s4-lat">—</em></div>
+          <div><span>Live instances / 32 (12 partitions)</span><em id="s4-inst">—</em></div>
+          <div><span>Top defect</span><em id="s4-def">—</em></div>
+        </div>
+        <div class="scalebar"><div class="lbl"><span>replicas</span><span>1 of 1–12 · <span class="co">Control only</span></span></div><div class="track"><div class="window" style="left:0;right:0"></div><div class="now" style="left:1%"></div></div><div class="lbl"><span>min 1</span><span>max 12</span></div></div>
+        <svg viewBox="0 0 200 56" aria-label="live instances over jobs per minute" id="c-st04"></svg>
+        <div class="fault g" id="f-st04">no faults</div>
+      </div>
+      <!-- ST-05 -->
+      <div class="panel new" id="p-st05">
+        <div class="ph"><b><svg class="st-ico"><use href="#st-mold"/></svg>ST-05 Mold &amp; cure</b><span>handler · batch.size 1000 (window)<br>group st05-mold-cure</span></div>
+        <div class="rows">
+          <div><span>Samples / s · lag</span><em id="s5-rate">—</em></div>
+          <div><span>Profile conformance</span><em id="s5-conf">—</em></div>
+          <div><span>Windows · last batch · instances</span><em id="s5-win">—</em></div>
+          <div><span>Presses reporting</span><em id="s5-press">—</em></div>
+        </div>
+        <div class="scalebar"><div class="lbl"><span>replicas</span><span>1 of 2–8 · <span class="co">Control only</span></span></div><div class="track"><div class="window" style="left:14%;right:0"></div><div class="now" style="left:1%"></div></div><div class="lbl"><span>min 2</span><span>max 8</span></div></div>
+        <svg viewBox="0 0 200 56" aria-label="eight oven zone temperatures" id="c-st05"></svg>
+        <div class="fault g" id="f-st05">no faults</div>
+      </div>
+      <!-- ST-06 -->
+      <div class="panel" id="p-st06">
+        <div class="ph"><b><svg class="st-ico"><use href="#st-test"/></svg>ST-06 Final test &amp; disposition</b><span>rust-kafka-transactional · replicas 1<br>st06-final-test-txn-1</span></div>
+        <div class="rows">
+          <div><span>Units / s · BATCH_SIZE · lag</span><em id="s6-rate">—</em></div>
+          <div><span>Txns committed · commit p95</span><em id="s6-txn">—</em></div>
+          <div><span>Aborted · requires-abort · fatal</span><em id="s6-abort">—</em></div>
+          <div><span>Duplicates · ledger vs twin (read_committed)</span><em id="s6-dup">—</em></div>
+        </div>
+        <svg viewBox="0 0 200 56" aria-label="yield by bin pareto" id="c-st06"></svg>
+        <div class="fault g" id="f-st06">read_committed · ledger consistent</div>
+      </div>
+    </div>
+
+    <div class="ledger" id="ledger">
+      <div class="h"><span>time</span><span>station</span><span>fault</span><span>state</span></div>
+    </div>
+  </div>
+  <div class="foot">
+    <span id="fold">—</span>
+    <a href="/api/state">/api/state</a>
+    <a href="/validate">/validate</a>
+    <span>Live: stations, simulator, DLQs, transactions, twin ledger, instance heartbeats. Static: replica window (Control only). Lag: from rpk via <code>make validate</code>.</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var svgns = 'http://www.w3.org/2000/svg';
+  function $(id) { return document.getElementById(id); }
+  function el(tag, attrs, text) {
+    var e = document.createElementNS(svgns, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function fmt(n) { return n == null ? '—' : Number(n).toLocaleString('en-US'); }
+  function pct(a, b) { return b ? (100 * a / b).toFixed(1) + '%' : '—'; }
+  function hhmm(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toTimeString().slice(0, 8); }
+  function lagOf(state, group) { var g = state.lag && state.lag.groups; return g && g[group] != null ? g[group] : null; }
+  function lagTxt(state, group) { var l = lagOf(state, group); return l == null ? 'lag ?' : l; }
+  // The panel's fault slot: the latest warn/crit if one is recent (10 min),
+  // else the latest row of any kind.
+  function pick(faults) {
+    if (!faults || !faults.length) return null;
+    for (var i = 0; i < faults.length; i++) {
+      var f = faults[i];
+      if ((f.severity === 'crit' || f.severity === 'warn') && Date.now() - f.ts < 600000) return f;
+    }
+    return faults[0];
+  }
+  function setFault(id, faults) {
+    var node = $(id), f = pick(faults);
+    if (!f) { node.className = 'fault g'; node.textContent = 'no faults'; return; }
+    node.className = 'fault ' + (f.severity === 'crit' ? 'c' : f.severity === 'info' ? 'i' : '');
+    node.textContent = hhmm(f.ts) + ' · ' + f.text + ' · ' + f.state;
+  }
+
+  // line chart of per-minute counts (last N minutes), area fill
+  function lineChart(svg, series, color, soft, label) {
+    clear(svg);
+    var n = series.length, max = Math.max.apply(null, series.concat([1]));
+    var pts = series.map(function (v, i) { return [(i / (n - 1)) * 200, 50 - (v / max) * 42]; });
+    var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+    svg.appendChild(el('path', { d: d + ' L200 56 L0 56Z', fill: soft }));
+    svg.appendChild(el('path', { d: d, fill: 'none', stroke: color, 'stroke-width': 1.5 }));
+    var last = pts[pts.length - 1];
+    svg.appendChild(el('circle', { cx: last[0], cy: last[1], r: 2.5, fill: color }));
+    svg.appendChild(el('text', { x: 2, y: 9, 'font-size': 7, fill: 'var(--ink-3)' }, label + ' · max ' + fmt(max)));
+  }
+
+  function render(state) {
+    var S = state.stations, now = state.now;
+    $('stamp').textContent = new Date(now).toLocaleTimeString() + ' · up ' + Math.floor(state.uptime_s / 60) + ' min · poll 2 s';
+    var hb = state.sim.heartbeat || {};
+    var simOn = state.sim.age_s >= 0 && state.sim.age_s < 20;
+    var dotClass = simOn ? (hb.running ? 'on' : '') : 'off';
+    var ov = hb.overlay ? ' + ' + hb.overlay.scenario + ' ' + hb.overlay.frame : '';
+    $('barr').innerHTML = 'broker 127.0.0.1:9092 <i class="dot ' + dotClass + '"></i> simulator ' +
+      (simOn ? (hb.running ? hb.scenario + ' · frame ' + hb.frame + ov : 'stopped') : 'no heartbeat') +
+      (state.sim.age_s >= 0 ? ' · ' + state.sim.age_s + 's ago' : '');
+
+    // KPIs
+    var s6 = S.st06, led = state.ledger, twin = state.twin;
+    $('k-uph').textContent = fmt(Math.round(s6.rate_60s * 3600));
+    $('k-uph-d').textContent = fmt(led.records) + ' units dispositioned';
+    $('k-yield').textContent = led.pass + led.fail ? pct(led.pass, led.pass + led.fail) : '—';
+    $('k-lots').textContent = fmt(S.st01.lots || 0);
+    $('k-lots-d').textContent = fmt(S.st01.produced) + ' wafer records';
+    var crit = state.faults.filter(function (f) { return f.severity === 'crit'; }).length;
+    var warn = state.faults.filter(function (f) { return f.severity === 'warn'; }).length;
+    $('k-faults').textContent = crit + warn;
+    var kd = $('k-faults-d'); kd.textContent = warn + ' warn · ' + crit + ' crit'; kd.className = 'd ' + (crit ? 'crit' : warn ? 'warn' : 'good');
+    if (state.lag && state.lag.groups) {
+      $('k-lag').textContent = fmt(state.total_lag);
+      var age = Math.round((now - state.lag.received) / 1000);
+      var ld = $('k-lag-d'); ld.textContent = 'rpk group describe · ' + age + 's ago'; ld.className = 'd ' + (state.total_lag > 0 ? 'warn' : 'good');
+    }
+
+    // ST-01
+    var s1 = S.st01;
+    var last60 = s1.per_min.slice(-60).reduce(function (a, b) { return a + b; }, 0);
+    $('s1-lots').textContent = fmt(last60);
+    $('s1-wpl').textContent = s1.lots ? (s1.wafers / s1.lots).toFixed(1) : '—';
+    $('s1-lat').textContent = s1.latency_p50 != null ? s1.latency_p50 + ' / ' + s1.latency_p95 + ' ms' : '—';
+    $('s1-prod').textContent = fmt(s1.produced);
+    $('s1-err').textContent = fmt(s1.record_errors || 0) + ' · ' + fmt(s1.rejected || 0);
+    lineChart($('c-st01'), s1.per_min, 'var(--accent)', 'var(--accent-soft)', 'lots / min · 4 h');
+    setFault('f-st01', s1.faults);
+    if (!pick(s1.faults) && s1.lots) { $('f-st01').textContent = fmt(s1.lots) + ' lots via send_batch · last prober ' + (s1.last_prober || '—'); }
+
+    // ST-02
+    var s2 = S.st02;
+    $('s2-rate').textContent = fmt(s2.rate_10s) + ' · ' + lagTxt(state, 'st02-die-attach');
+    $('s2-spec').textContent = pct(s2.in_spec || 0, s2.consumed) + ' · ' + fmt(s2.flags || 0);
+    var cpk = s2.cpk || {}, worst = null;
+    Object.keys(cpk).forEach(function (h) { if (worst == null || cpk[h] < cpk[worst]) worst = h; });
+    $('s2-cpk').textContent = worst ? cpk[worst].toFixed(2) + ' · ' + worst : '—';
+    $('s2-inst').textContent = s2.live_instances + ' (' + s2.instances_ever + ' ever)';
+    $('s2-dlq').textContent = s2.dlq + ' · ' + s2.redelivered + ' · ' + s2.partial;
+    var c2 = $('c-st02'); clear(c2);
+    ['H1', 'H2', 'H3', 'H4'].forEach(function (h, i) {
+      var v = cpk[h] || 0, hgt = Math.min(44, v * 22);
+      c2.appendChild(el('rect', { x: 8 + i * 48, y: 50 - hgt, width: 36, height: hgt, fill: v >= 1.33 ? 'var(--good)' : v > 0 ? 'var(--warn)' : 'var(--line)' }));
+      c2.appendChild(el('text', { x: 8 + i * 48, y: 55, 'font-size': 6, fill: 'var(--ink-3)' }, h + ' ' + (v ? v.toFixed(2) : '')));
+    });
+    c2.appendChild(el('path', { d: 'M0 ' + (50 - 1.33 * 22) + 'H200', stroke: 'var(--ink-3)', 'stroke-dasharray': '3 3', 'stroke-width': 1 }));
+    c2.appendChild(el('text', { x: 2, y: 50 - 1.33 * 22 - 2, 'font-size': 7, fill: 'var(--ink-3)' }, 'Cpk 1.33'));
+    setFault('f-st02', s2.faults);
+    if (s2.dead_letters[0]) {
+      var dl = s2.dead_letters[0], hd = dl.headers || {};
+      var origin = Object.keys(hd).filter(function (k) { return /origin|source|partition|offset/.test(k); }).map(function (k) { return k + '=' + hd[k]; }).join(' ');
+      $('f-st02').className = 'fault';
+      $('f-st02').textContent = s2.dlq + ' record' + (s2.dlq > 1 ? 's' : '') + ' in dieattach.dlq · ' + (hd['x-dlq-reason'] || hd['reason'] || hd['detail'] || hd['error'] || Object.values(hd)[0] || '') + (origin ? ' · ' + origin : '') + ' · key ' + dl.key;
+    }
+
+    // ST-03
+    var s3 = S.st03;
+    $('s3-rate').textContent = fmt(s3.rate_10s) + ' · ' + lagTxt(state, 'st03-wire-bond');
+    $('s3-nsop').textContent = pct(s3.nsop_windows || 0, s3.windows || 0) + ' (' + fmt(s3.nsop_windows || 0) + ' / ' + fmt(s3.windows || 0) + ')';
+    $('s3-win').textContent = ((s3.window_ms || 5000) / 1000).toFixed(1) + ' s · ' + fmt(s3.windows_flushed_on_rebalance || 0) + ' · ' + fmt(s3.seeks || 0) + ' · ' + fmt(s3.replayed);
+    $('s3-cfg').textContent = (s3.batch_size || '—') + ' · ' + (s3.nsop_threshold_pct != null ? s3.nsop_threshold_pct + '%' : '—') + ' · ' + fmt(s3.rebalances || 0);
+    $('s3-dlq').textContent = fmt(s3.dlq);
+    var c3 = $('c-st03'); clear(c3);
+    var bonders = s3.bonders || {};
+    for (var i = 0; i < 40; i++) {
+      var b = bonders[String(i + 1)] || {}, w = b.windows || 0, nsop = b.nsop || 0, rate = w ? nsop / w : 0;
+      var recent = b.ts && now - b.ts < 15000;
+      var hot = b.delta != null && b.delta < -15 && recent;
+      var col = i % 20, row = Math.floor(i / 20);
+      var r = el('rect', { x: col * 10 + 1, y: row * 24 + 4, width: 8, height: 20, rx: 1,
+        fill: hot ? 'var(--crit)' : rate > 0.3 ? 'var(--warn)' : w ? 'var(--good)' : 'var(--line)',
+        opacity: hot ? 1 : rate > 0.3 ? 0.9 : w ? (recent ? 0.85 : 0.4) : 0.5 });
+      r.appendChild(el('title', {}, 'bonder ' + (i + 1) + ' · ' + w + ' windows · NSOP ' + nsop + (b.delta != null ? ' · Δpower ' + b.delta + '%' : '') + (b.us_w != null ? ' · ' + b.us_w + ' W' : '')));
+      c3.appendChild(r);
+    }
+    setFault('f-st03', s3.faults);
+
+    // ST-04
+    var s4 = S.st04;
+    $('s4-rate').textContent = fmt(Math.round(s4.rate_60s * 60)) + ' · ' + lagTxt(state, 'st04-inspection');
+    $('s4-lat').textContent = s4.latency_p50 != null ? s4.latency_p50 + ' / ' + s4.latency_p95 + ' ms' : '—';
+    $('s4-inst').textContent = s4.live_instances + ' (' + s4.instances_ever + ' ever)';
+    var defs = s4.defects || {}, top = null;
+    Object.keys(defs).forEach(function (d) { if (d !== 'none' && (top == null || defs[d] > defs[top])) top = d; });
+    $('s4-def').textContent = top ? top + ' · ' + defs[top] : 'none · ' + fmt(defs.none || 0) + ' clean';
+    lineChart($('c-st04'), s4.per_min.slice(-60), 'var(--copper)', 'var(--copper-soft)', 'jobs / min · 60 min · instances now ' + s4.live_instances);
+    setFault('f-st04', s4.faults);
+    if (!pick(s4.faults) && s4.live_instances >= 12) { $('f-st04').className = 'fault i'; $('f-st04').textContent = 'live instances pinned at 12 = assigned partitions; the pool cannot help past that (replica scaling is Control)'; }
+
+    // ST-05
+    var s5 = S.st05;
+    $('s5-rate').textContent = fmt(s5.rate_10s) + ' · ' + lagTxt(state, 'st05-mold-cure');
+    $('s5-conf').textContent = s5.conformance_pct != null ? s5.conformance_pct + '%' : '—';
+    $('s5-win').textContent = fmt(s5.windows || 0) + ' · ' + fmt(s5.last_batch || 0) + ' · ' + s5.live_instances;
+    var presses = s5.presses || {};
+    $('s5-press').textContent = Object.keys(presses).length + ' / 6';
+    var c5 = $('c-st05'); clear(c5);
+    c5.appendChild(el('rect', { x: 0, y: 18, width: 200, height: 14, fill: 'var(--good-soft)' }));
+    // zone means across presses, worst press highlighted
+    var zsum = [0, 0, 0, 0, 0, 0, 0, 0], zn = [0, 0, 0, 0, 0, 0, 0, 0], worstP = null, worstD = 0;
+    Object.keys(presses).forEach(function (p) {
+      var z = presses[p].zones_c || [];
+      z.forEach(function (t, j) { if (t != null) { zsum[j] += t; zn[j]++; } });
+      var wz = presses[p].worst_zone; if (wz && Math.abs(wz.drift_c) > Math.abs(worstD)) { worstD = wz.drift_c; worstP = p; }
+    });
+    for (var j = 0; j < 8; j++) {
+      var t = zn[j] ? zsum[j] / zn[j] : 175, y = 25 - (t - 175) * 3;
+      c5.appendChild(el('rect', { x: j * 25 + 6, y: Math.min(y, 25), width: 13, height: Math.abs(25 - y) + 2, rx: 1, fill: Math.abs(t - 175) > 2 ? 'var(--warn)' : 'var(--accent)' }));
+      c5.appendChild(el('text', { x: j * 25 + 6, y: 52, 'font-size': 7, fill: 'var(--ink-3)' }, 'Z' + (j + 1) + (zn[j] ? ' ' + t.toFixed(0) : '')));
+    }
+    c5.appendChild(el('text', { x: 2, y: 10, 'font-size': 7, fill: 'var(--ink-3)' }, 'profile 175 ±2 °C · mean of ' + Object.keys(presses).length + ' presses' + (worstP ? ' · worst ' + worstP + ' ' + (worstD > 0 ? '+' : '') + worstD + ' °C' : '')));
+    setFault('f-st05', s5.faults);
+
+    // ST-06
+    $('s6-rate').textContent = fmt(s6.rate_10s) + ' · 100 · ' + lagTxt(state, 'st06-final-test');
+    $('s6-txn').textContent = fmt(s6.txns || 0) + ' · ' + (s6.latency_p95 != null ? s6.latency_p95 + ' ms' : '—');
+    $('s6-abort').textContent = fmt(s6.aborted || 0) + ' · ' + fmt(s6.requires_abort || 0) + ' · ' + fmt(s6.fatal || 0);
+    $('s6-dup').textContent = fmt(led.duplicates) + ' · Δ ' + fmt(twin.records - led.records) + ' (twin dups ' + fmt(twin.duplicates) + ')';
+    var c6 = $('c-st06'); clear(c6);
+    var bins = s6.bins || {}, keys = Object.keys(bins).sort(function (a, b) { return bins[b] - bins[a]; }).slice(0, 6);
+    var bmax = keys.length ? bins[keys[0]] : 1;
+    keys.forEach(function (k, i) {
+      var h = Math.max(1, 42 * bins[k] / bmax);
+      c6.appendChild(el('rect', { x: 6 + i * 30, y: 48 - h, width: 24, height: h, fill: k === '1' ? 'var(--good)' : Number(k) < 8 ? 'var(--warn)' : 'var(--crit)' }));
+      c6.appendChild(el('text', { x: 6 + i * 30, y: 55, 'font-size': 6, fill: 'var(--ink-3)' }, 'bin' + k + ' ' + fmt(bins[k])));
+    });
+    var f6 = $('f-st06');
+    if (led.duplicates > 0) { f6.className = 'fault c'; f6.textContent = led.duplicates + ' duplicate units in lot.disposition — must read 0'; }
+    else if (pick(s6.faults)) setFault('f-st06', s6.faults);
+    else { f6.className = 'fault g'; f6.textContent = 'read_committed · ' + fmt(led.units) + ' units, 0 duplicates · twin ' + fmt(twin.units) + ' units, ' + fmt(twin.duplicates) + ' duplicates'; }
+
+    // Ledger
+    var L = $('ledger');
+    while (L.children.length > 1) L.removeChild(L.lastChild);
+    state.faults.slice(0, 18).forEach(function (f) {
+      var row = document.createElement('div');
+      var color = f.severity === 'crit' ? 'var(--crit)' : f.severity === 'warn' ? 'var(--warn)' : 'var(--good)';
+      row.innerHTML = '<span>' + hhmm(f.ts) + '</span><span>' + f.label + '</span><span></span><span style="color:' + color + '">' + f.severity.toUpperCase() + ' · ' + f.state + '</span>';
+      row.children[2].textContent = f.text;
+      L.appendChild(row);
+    });
+    $('fold').textContent = 'folded ' + fmt(state.fold.records) + ' metric records in ' + fmt(state.fold.batches) + ' handler batches';
+  }
+
+  function tick() {
+    fetch('/api/state', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(render).catch(function (e) {
+      $('stamp').textContent = 'dashboard unreachable: ' + e;
+    });
+  }
+  tick();
+  setInterval(tick, 2000);
+})();
+</script>
+</body>
+</html>

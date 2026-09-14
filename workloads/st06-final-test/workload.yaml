@@ -1,0 +1,54 @@
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+metadata:
+  name: "st06-final-test"
+  namespace: default
+spec:
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [consumer]
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        topics: "finaltest.bins"
+        consumer.group.id: "st06-final-test"
+        auto.offset.reset: earliest
+        # Offsets travel in the transaction.
+        enable.auto.commit: "false"
+    - name: transaction
+      namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [transaction]
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        # The output topics AND every input topic whose offsets it enlists;
+        # line.metrics because this station's metrics ride in the transaction.
+        topics: "finaltest.bins,lot.disposition,inventory.moves,line.metrics"
+        # One STABLE id per live instance — never more than one replica.
+        transactional.id: "st06-final-test-txn-1"
+        transaction.group.id: "st06-final-test"
+  # A wasi:cli/run component runs as the workload's long-running service
+  # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
+  service:
+    name: final-test
+    image: oci.localhost:8200/apps/st06-final-test:0.1.0
+    maxRestarts: 100
+    localResources:
+      environment:
+        config:
+          IN_TOPIC: finaltest.bins
+          OUT_TOPIC: lot.disposition
+          MOVES_TOPIC: inventory.moves
+          BATCH_SIZE: "100"
+      allowedHosts: []
+  # Desktop's Workload schema requires at least one component; this entry is
+  # never invoked (the service above is what runs). replicas stays 1.
+  components:
+    - name: final-test
+      image: oci.localhost:8200/apps/st06-final-test:0.1.0
+      localResources:
+        allowedHosts: []

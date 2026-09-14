@@ -1,0 +1,13 @@
+package cosmonic-templates:kafka-pull-service;
+
+// The factory simulator: a long-running service that owns one consumer
+// session on `sim.control` and plays static scenario frames onto the input
+// topics through the host-owned producer on a 1-second monotonic-clock tick.
+//
+// `std::env` supplies environment variables without a second wasi:cli version.
+world kafka-pull-service {
+    import cosmonic:kafka/consumer@0.5.0;
+    import cosmonic:kafka/producer@0.5.0;
+    import wasi:clocks/monotonic-clock@0.3.0;
+    export wasi:cli/run@0.3.0;
+}

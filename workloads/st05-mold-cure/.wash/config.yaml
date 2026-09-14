@@ -1,0 +1,30 @@
+build:
+  # wasm32-wasip2 is required: `cosmonic:kafka@0.5.0`'s functions are all
+  # `async func`, which needs the p3 bindings wit-bindgen generates on top of
+  # a p2 core module.
+  command: cargo build --target wasm32-wasip2 --release
+  component_path: target/wasm32-wasip2/release/st05_mold_cure.wasm
+
+# The binding: the handler subscription, the grant (subscription + DLQ +
+# every produce target + line.metrics), the required group id and DLQ.
+workload:
+  allowedHosts: []
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: "0.5.0"
+      interfaces:
+        - handler
+        - producer
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        handler.topics: mold.telemetry
+        topics: mold.telemetry,mold.dlq,mold.profile,line.metrics
+        handler.group.id: st05-mold-cure
+        auto.offset.reset: earliest
+        dead-letter.topic: mold.dlq
+        # One batch of one partition is one window (the stream-processor stand-in).
+        handler.batch.size: "1000"
+        # A long window wants the poll interval, not a smaller pool.
+        max.poll.interval.ms: "900000"

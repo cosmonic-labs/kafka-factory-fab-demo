@@ -1,0 +1,11 @@
+package cosmonic-templates:kafka-handler-consumer;
+
+// The line dashboard is ONE component with two entries: the host pushes
+// line.metrics (and the DLQ / ledger topics it summarizes) into the
+// cosmonic:kafka handler, and serves the dashboard page and /api/state from
+// the wasi:http handler. Both land on the same warm instance (poolSize 1), so
+// the fold lives in package-level memory.
+world kafka-handler-consumer {
+    export cosmonic:kafka/handler@0.5.0;
+    export wasi:http/handler@0.3.0;
+}

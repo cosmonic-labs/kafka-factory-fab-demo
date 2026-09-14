@@ -1,0 +1,7 @@
+{
+  "name": "poison",
+  "frames": 1,
+  "next": null,
+  "overlay": true,
+  "note": "one dieattach reading with a NaN bond-line thickness"
+}

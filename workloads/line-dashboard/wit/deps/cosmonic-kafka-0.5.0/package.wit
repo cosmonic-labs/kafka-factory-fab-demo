@@ -1,0 +1,1320 @@
+package cosmonic:kafka@0.5.0;
+
+/// Types shared by the producer and consumer interfaces.
+@since(version = 0.1.0)
+interface types {
+  /// Milliseconds since the Unix epoch.
+  @since(version = 0.1.0)
+  type timestamp-ms = s64;
+
+  /// A partition index within a topic.
+  ///
+  /// Negative values are not valid partition indexes. Where a partition may
+  /// be left to the client's partitioner, the field is an `option` rather
+  /// than a magic negative value.
+  @since(version = 0.1.0)
+  type partition = s32;
+
+  /// A record's position within a partition.
+  @since(version = 0.1.0)
+  type offset = s64;
+
+  /// A starting position, for seek and assignment.
+  ///
+  /// librdkafka spells these as negative `offset` sentinels; they are a
+  /// variant here so a real offset and a symbolic position cannot be
+  /// confused.
+  @since(version = 0.1.0)
+  variant position {
+    /// The earliest offset still retained.
+    beginning,
+    /// The next offset to be produced.
+    end,
+    /// The group's committed offset, falling back to `auto.offset.reset`
+    /// when there is none.
+    stored,
+    /// This many records back from the end.
+    tail(u64),
+    /// An exact offset.
+    exact(offset),
+  }
+
+  /// How a record's timestamp was assigned.
+  @since(version = 0.1.0)
+  enum timestamp-type {
+    /// The broker did not report one.
+    not-available,
+    /// Set by the producer.
+    create-time,
+    /// Set by the broker when the record was appended.
+    log-append-time,
+  }
+
+  /// A record header.
+  ///
+  /// Keys may repeat within one record, and a value may be absent — which is
+  /// distinct from an empty value.
+  @since(version = 0.1.0)
+  record header {
+    key: string,
+    value: option<list<u8>>,
+  }
+
+  /// A partition, named.
+  ///
+  /// What `assign`, `pause` and the query operations take: they act on a
+  /// partition, and an offset would mean nothing to them.
+  @since(version = 0.1.0)
+  record partition-ref {
+    topic: string,
+    partition: partition,
+  }
+
+  /// A position in a partition.
+  ///
+  /// What `commit` and `seek` take. The offset is **required** here, which is
+  /// the point of the type: under one shared record it was optional, so a
+  /// caller could build a well-typed commit with nothing to commit and only
+  /// find out at run time.
+  @since(version = 0.1.0)
+  record partition-offset {
+    topic: string,
+    partition: partition,
+    offset: offset,
+    /// The broker's leader epoch for this position, when known. Carrying it
+    /// through a commit or seek round trip is what makes offset fencing
+    /// work: a commit from a stale leader is rejected rather than applied.
+    leader-epoch: option<s32>,
+    /// Opaque per-partition metadata stored alongside a committed offset.
+    metadata: option<list<u8>>,
+  }
+
+  /// The low and high watermarks of a partition.
+  @since(version = 0.1.0)
+  record watermarks {
+    /// Offset of the earliest retained record.
+    low: offset,
+    /// Offset that will be assigned to the next record produced.
+    high: offset,
+  }
+
+  /// A record read from a partition.
+  @since(version = 0.1.0)
+  record consumed-record {
+    topic: string,
+    partition: partition,
+    offset: offset,
+    /// Absent when produced without a key. An empty key is a distinct,
+    /// valid value.
+    key: option<list<u8>>,
+    /// Absent for a tombstone — a null value, meaningful to compacted
+    /// topics. An empty value is distinct from a tombstone.
+    value: option<list<u8>>,
+    headers: list<header>,
+    timestamp: option<timestamp-ms>,
+    timestamp-type: timestamp-type,
+    /// Leader epoch the record was read under, when the broker reported
+    /// one.
+    leader-epoch: option<s32>,
+  }
+
+  /// A record to produce.
+  @since(version = 0.1.0)
+  record produce-record {
+    /// Absent lets the configured partitioner choose.
+    partition: option<partition>,
+    key: option<list<u8>>,
+    /// Absent produces a tombstone.
+    value: option<list<u8>>,
+    headers: list<header>,
+    /// Absent lets the client or broker stamp the time.
+    timestamp: option<timestamp-ms>,
+  }
+
+  /// Where a produced record landed.
+  @since(version = 0.1.0)
+  record produce-ack {
+    partition: partition,
+    offset: offset,
+    timestamp: option<timestamp-ms>,
+  }
+
+  /// Every error librdkafka can report.
+  ///
+  /// Generated from `rd_kafka_resp_err_t`. Codes below zero are raised by the
+  /// client itself; the rest come from the broker. Two are routinely
+  /// mishandled: `no-error` is a success value that appears in per-partition
+  /// result lists, and `not-leader-for-partition` means "refresh metadata and
+  /// retry", not "give up".
+  @since(version = 0.1.0)
+  variant error-code {
+    /// A code this interface does not name, carrying the broker's own
+    /// number.
+    ///
+    /// A `variant` with this case rather than an `enum`, following
+    /// `wasi:http`'s: Kafka adds error codes and a WIT enum cannot grow
+    /// without a breaking version, so an exhaustive one would turn every
+    /// future broker release into a choice between an unrepresentable
+    /// error and a new major. The payload is what keeps such a code
+    /// actionable — a caller can log it, match on it, and file a bug —
+    /// where a bare `unknown` leaves the detail only in a human-readable
+    /// message. Treat as non-retriable unless the number says otherwise.
+    unknown-error-code(s32),
+    /// Received message is incorrect (client-side, code -199)
+    bad-msg,
+    /// Bad/unknown compression (client-side, code -198)
+    bad-compression,
+    /// Broker is going away, together with client instance (client-
+    /// side, code -197)
+    destroy,
+    /// Generic failure (client-side, code -196)
+    fail,
+    /// Broker transport failure (client-side, code -195)
+    transport,
+    /// Critical system resource (client-side, code -194)
+    crit-sys-resource,
+    /// Failed to resolve broker (client-side, code -193)
+    resolve,
+    /// Produced message timed out (client-side, code -192)
+    msg-timed-out,
+    /// client-side, code -191
+    partition-eof,
+    /// Permanent: Partition does not exist in cluster (client-side,
+    /// code -190)
+    unknown-partition,
+    /// File or filesystem error (client-side, code -189)
+    fs,
+    /// Permanent: Topic does not exist in cluster (client-side, code
+    /// -188)
+    unknown-topic,
+    /// All broker connections are down (client-side, code -187)
+    all-brokers-down,
+    /// Invalid argument, or invalid configuration (client-side, code
+    /// -186)
+    invalid-arg,
+    /// Operation timed out (client-side, code -185)
+    timed-out,
+    /// Queue is full (client-side, code -184)
+    queue-full,
+    /// ISR count < required.acks (client-side, code -183)
+    isr-insuff,
+    /// Broker node update (client-side, code -182)
+    node-update,
+    /// SSL error (client-side, code -181)
+    ssl,
+    /// Waiting for coordinator to become available (client-side, code
+    /// -180)
+    wait-coord,
+    /// Unknown client group (client-side, code -179)
+    unknown-group,
+    /// Operation in progress (client-side, code -178)
+    in-progress,
+    /// Previous operation in progress, wait for it to finish (client-
+    /// side, code -177)
+    prev-in-progress,
+    /// This operation would interfere with an existing subscription
+    /// (client-side, code -176)
+    existing-subscription,
+    /// Assigned partitions (rebalance_cb) (client-side, code -175)
+    assign-partitions,
+    /// Revoked partitions (rebalance_cb) (client-side, code -174)
+    revoke-partitions,
+    /// Conflicting use (client-side, code -173)
+    conflict,
+    /// Wrong state (client-side, code -172)
+    state,
+    /// Unknown protocol (client-side, code -171)
+    unknown-protocol,
+    /// Not implemented (client-side, code -170)
+    not-implemented,
+    /// Authentication failure (client-side, code -169)
+    authentication,
+    /// No stored offset (client-side, code -168)
+    no-offset,
+    /// Outdated (client-side, code -167)
+    outdated,
+    /// Timed out in queue (client-side, code -166)
+    timed-out-queue,
+    /// Feature not supported by broker (client-side, code -165)
+    unsupported-feature,
+    /// Awaiting cache update (client-side, code -164)
+    wait-cache,
+    /// Operation interrupted (e.g., due to yield) (client-side, code
+    /// -163)
+    intr,
+    /// Key serialization error (client-side, code -162)
+    key-serialization,
+    /// Value serialization error (client-side, code -161)
+    value-serialization,
+    /// Key deserialization error (client-side, code -160)
+    key-deserialization,
+    /// Value deserialization error (client-side, code -159)
+    value-deserialization,
+    /// Partial response (client-side, code -158)
+    partial,
+    /// Modification attempted on read-only object (client-side, code
+    /// -157)
+    read-only,
+    /// No such entry / item not found (client-side, code -156)
+    noent,
+    /// Read underflow (client-side, code -155)
+    underflow,
+    /// Invalid type (client-side, code -154)
+    invalid-type,
+    /// Retry operation (client-side, code -153)
+    retry,
+    /// Purged in queue (client-side, code -152)
+    purge-queue,
+    /// Purged in flight (client-side, code -151)
+    purge-inflight,
+    /// Fatal error: see rd_kafka_fatal_error() (client-side, code -150)
+    fatal,
+    /// Inconsistent state (client-side, code -149)
+    inconsistent,
+    /// Gap-less ordering would not be guaranteed if proceeding (client-
+    /// side, code -148)
+    gapless-guarantee,
+    /// Maximum poll interval exceeded (client-side, code -147)
+    max-poll-exceeded,
+    /// Unknown broker (client-side, code -146)
+    unknown-broker,
+    /// Functionality not configured (client-side, code -145)
+    not-configured,
+    /// Instance has been fenced (client-side, code -144)
+    fenced,
+    /// Application generated error (client-side, code -143)
+    application,
+    /// Assignment lost (client-side, code -142)
+    assignment-lost,
+    /// No operation performed (client-side, code -141)
+    noop,
+    /// No offset to automatically reset to (client-side, code -140)
+    auto-offset-reset,
+    /// Partition log truncation detected (client-side, code -139)
+    log-truncation,
+    /// client-side, code -138
+    invalid-different-record,
+    /// Broker is going away but client isn't terminating (client-side,
+    /// code -137)
+    destroy-broker,
+    /// Unknown broker error (client-side, code -1)
+    unknown,
+    /// Success (broker, code 0)
+    no-error,
+    /// Offset out of range (broker, code 1)
+    offset-out-of-range,
+    /// Invalid message (broker, code 2)
+    invalid-msg,
+    /// Unknown topic or partition (broker, code 3)
+    unknown-topic-or-part,
+    /// Invalid message size (broker, code 4)
+    invalid-msg-size,
+    /// Leader not available (broker, code 5)
+    leader-not-available,
+    /// Not leader for partition (broker, code 6)
+    not-leader-for-partition,
+    /// Request timed out (broker, code 7)
+    request-timed-out,
+    /// Broker not available (broker, code 8)
+    broker-not-available,
+    /// Replica not available (broker, code 9)
+    replica-not-available,
+    /// Message size too large (broker, code 10)
+    msg-size-too-large,
+    /// StaleControllerEpochCode (broker, code 11)
+    stale-ctrl-epoch,
+    /// Offset metadata string too large (broker, code 12)
+    offset-metadata-too-large,
+    /// Broker disconnected before response received (broker, code 13)
+    network-exception,
+    /// Coordinator load in progress (broker, code 14)
+    coordinator-load-in-progress,
+    /// Coordinator not available (broker, code 15)
+    coordinator-not-available,
+    /// Not coordinator (broker, code 16)
+    not-coordinator,
+    /// Invalid topic (broker, code 17)
+    topic-exception,
+    /// Message batch larger than configured server segment size
+    /// (broker, code 18)
+    record-list-too-large,
+    /// Not enough in-sync replicas (broker, code 19)
+    not-enough-replicas,
+    /// Message(s) written to insufficient number of in-sync replicas
+    /// (broker, code 20)
+    not-enough-replicas-after-append,
+    /// Invalid required acks value (broker, code 21)
+    invalid-required-acks,
+    /// Specified group generation id is not valid (broker, code 22)
+    illegal-generation,
+    /// Inconsistent group protocol (broker, code 23)
+    inconsistent-group-protocol,
+    /// Invalid group.id (broker, code 24)
+    invalid-group-id,
+    /// Unknown member (broker, code 25)
+    unknown-member-id,
+    /// Invalid session timeout (broker, code 26)
+    invalid-session-timeout,
+    /// Group rebalance in progress (broker, code 27)
+    rebalance-in-progress,
+    /// Commit offset data size is not valid (broker, code 28)
+    invalid-commit-offset-size,
+    /// Topic authorization failed (broker, code 29)
+    topic-authorization-failed,
+    /// Group authorization failed (broker, code 30)
+    group-authorization-failed,
+    /// Cluster authorization failed (broker, code 31)
+    cluster-authorization-failed,
+    /// Invalid timestamp (broker, code 32)
+    invalid-timestamp,
+    /// Unsupported SASL mechanism (broker, code 33)
+    unsupported-sasl-mechanism,
+    /// Illegal SASL state (broker, code 34)
+    illegal-sasl-state,
+    /// Unuspported version (broker, code 35)
+    unsupported-version,
+    /// Topic already exists (broker, code 36)
+    topic-already-exists,
+    /// Invalid number of partitions (broker, code 37)
+    invalid-partitions,
+    /// Invalid replication factor (broker, code 38)
+    invalid-replication-factor,
+    /// Invalid replica assignment (broker, code 39)
+    invalid-replica-assignment,
+    /// Invalid config (broker, code 40)
+    invalid-config,
+    /// Not controller for cluster (broker, code 41)
+    not-controller,
+    /// Invalid request (broker, code 42)
+    invalid-request,
+    /// Message format on broker does not support request (broker, code
+    /// 43)
+    unsupported-for-message-format,
+    /// Policy violation (broker, code 44)
+    policy-violation,
+    /// Broker received an out of order sequence number (broker, code
+    /// 45)
+    out-of-order-sequence-number,
+    /// Broker received a duplicate sequence number (broker, code 46)
+    duplicate-sequence-number,
+    /// Producer attempted an operation with an old epoch (broker, code
+    /// 47)
+    invalid-producer-epoch,
+    /// Producer attempted a transactional operation in an invalid state
+    /// (broker, code 48)
+    invalid-txn-state,
+    /// broker, code 49
+    invalid-producer-id-mapping,
+    /// broker, code 50
+    invalid-transaction-timeout,
+    /// broker, code 51
+    concurrent-transactions,
+    /// broker, code 52
+    transaction-coordinator-fenced,
+    /// Transactional Id authorization failed (broker, code 53)
+    transactional-id-authorization-failed,
+    /// Security features are disabled (broker, code 54)
+    security-disabled,
+    /// Operation not attempted (broker, code 55)
+    operation-not-attempted,
+    /// Disk error when trying to access log file on the disk (broker,
+    /// code 56)
+    kafka-storage-error,
+    /// broker, code 57
+    log-dir-not-found,
+    /// SASL Authentication failed (broker, code 58)
+    sasl-authentication-failed,
+    /// Unknown Producer Id (broker, code 59)
+    unknown-producer-id,
+    /// Partition reassignment is in progress (broker, code 60)
+    reassignment-in-progress,
+    /// Delegation Token feature is not enabled (broker, code 61)
+    delegation-token-auth-disabled,
+    /// Delegation Token is not found on server (broker, code 62)
+    delegation-token-not-found,
+    /// Specified Principal is not valid Owner/Renewer (broker, code 63)
+    delegation-token-owner-mismatch,
+    /// Delegation Token requests are not allowed on this connection
+    /// (broker, code 64)
+    delegation-token-request-not-allowed,
+    /// Delegation Token authorization failed (broker, code 65)
+    delegation-token-authorization-failed,
+    /// Delegation Token is expired (broker, code 66)
+    delegation-token-expired,
+    /// Supplied principalType is not supported (broker, code 67)
+    invalid-principal-type,
+    /// The group is not empty (broker, code 68)
+    non-empty-group,
+    /// The group id does not exist (broker, code 69)
+    group-id-not-found,
+    /// The fetch session ID was not found (broker, code 70)
+    fetch-session-id-not-found,
+    /// The fetch session epoch is invalid (broker, code 71)
+    invalid-fetch-session-epoch,
+    /// No matching listener (broker, code 72)
+    listener-not-found,
+    /// Topic deletion is disabled (broker, code 73)
+    topic-deletion-disabled,
+    /// Leader epoch is older than broker epoch (broker, code 74)
+    fenced-leader-epoch,
+    /// Leader epoch is newer than broker epoch (broker, code 75)
+    unknown-leader-epoch,
+    /// Unsupported compression type (broker, code 76)
+    unsupported-compression-type,
+    /// Broker epoch has changed (broker, code 77)
+    stale-broker-epoch,
+    /// Leader high watermark is not caught up (broker, code 78)
+    offset-not-available,
+    /// Group member needs a valid member ID (broker, code 79)
+    member-id-required,
+    /// Preferred leader was not available (broker, code 80)
+    preferred-leader-not-available,
+    /// Consumer group has reached maximum size (broker, code 81)
+    group-max-size-reached,
+    /// broker, code 82
+    fenced-instance-id,
+    /// Eligible partition leaders are not available (broker, code 83)
+    eligible-leaders-not-available,
+    /// Leader election not needed for topic partition (broker, code 84)
+    election-not-needed,
+    /// No partition reassignment is in progress (broker, code 85)
+    no-reassignment-in-progress,
+    /// broker, code 86
+    group-subscribed-to-topic,
+    /// Broker failed to validate record (broker, code 87)
+    invalid-record,
+    /// There are unstable offsets that need to be cleared (broker, code
+    /// 88)
+    unstable-offset-commit,
+    /// Throttling quota has been exceeded (broker, code 89)
+    throttling-quota-exceeded,
+    /// broker, code 90
+    producer-fenced,
+    /// Request illegally referred to resource that does not exist
+    /// (broker, code 91)
+    resource-not-found,
+    /// Request illegally referred to the same resource twice (broker,
+    /// code 92)
+    duplicate-resource,
+    /// Requested credential would not meet criteria for acceptability
+    /// (broker, code 93)
+    unacceptable-credential,
+    /// broker, code 94
+    inconsistent-voter-set,
+    /// Invalid update version (broker, code 95)
+    invalid-update-version,
+    /// Unable to update finalized features due to server error (broker,
+    /// code 96)
+    feature-update-failed,
+    /// Request principal deserialization failed during forwarding
+    /// (broker, code 97)
+    principal-deserialization-failure,
+    /// Unknown Topic Id (broker, code 100)
+    unknown-topic-id,
+    /// The log's topic ID did not match the topic ID in the request
+    /// (broker, code 103)
+    inconsistent-topic-id,
+    /// The member epoch is fenced by the group coordinator (broker,
+    /// code 110)
+    fenced-member-epoch,
+    /// broker, code 111
+    unreleased-instance-id,
+    /// broker, code 112
+    unsupported-assignor,
+    /// The member epoch is stale (broker, code 113)
+    stale-member-epoch,
+    /// The request was sent to an endpoint of the wrong type (broker,
+    /// code 114)
+    mismatched-endpoint-type,
+    /// This endpoint type is not supported yet (broker, code 115)
+    unsupported-endpoint-type,
+    /// This controller ID is not known (broker, code 116)
+    unknown-controller-id,
+    /// broker, code 117
+    unknown-subscription-id,
+    /// broker, code 118
+    telemetry-too-large,
+    /// broker, code 119
+    invalid-registration,
+    /// broker, code 120
+    transaction-abortable,
+    /// broker, code 121
+    invalid-record-state,
+    /// The share session was not found (broker, code 122)
+    share-session-not-found,
+    /// The share session epoch is invalid (broker, code 123)
+    invalid-share-session-epoch,
+    /// broker, code 124
+    fenced-state-epoch,
+    /// The voter key doesn't match the receiving replica's key (broker,
+    /// code 125)
+    invalid-voter-key,
+    /// The voter is already part of the set of voters (broker, code
+    /// 126)
+    duplicate-voter,
+    /// The voter is not part of the set of voters (broker, code 127)
+    voter-not-found,
+    /// The regular expression is not valid (broker, code 128)
+    invalid-regular-expression,
+    /// broker, code 129
+    rebootstrap-required,
+    /// The supplied topology is invalid (broker, code 130)
+    streams-invalid-topology,
+    /// The supplied topology epoch is invalid (broker, code 131)
+    streams-invalid-topology-epoch,
+    /// The supplied topology epoch is outdated (broker, code 132)
+    streams-topology-fenced,
+    /// The limit of share sessions has been reached (broker, code 133)
+    share-session-limit-reached,
+  }
+
+  /// One partition's outcome from a batch operation.
+  ///
+  /// Separate from the request types because `error` only means something on
+  /// the way back — a per-partition failure inside a call that otherwise
+  /// succeeded, which is how Kafka reports most of them.
+  @since(version = 0.1.0)
+  record partition-result {
+    topic: string,
+    partition: partition,
+    /// The offset the operation settled on, absent when this partition
+    /// failed or has none.
+    offset: option<offset>,
+    leader-epoch: option<s32>,
+    metadata: option<list<u8>>,
+    /// Absent on success.
+    error: option<error-code>,
+  }
+
+  /// An error, with librdkafka's own classification attached.
+  ///
+  /// The three predicates are not derivable from `code`: the same code can be
+  /// retriable in one context and fatal in another, so they are reported per
+  /// occurrence exactly as `rd_kafka_error_t` does. Branch on these, not on
+  /// the code, when deciding whether to retry, abort a transaction, or
+  /// rebuild the client.
+  @since(version = 0.1.0)
+  record error {
+    code: error-code,
+    /// Human-readable detail. Not stable; do not parse it.
+    message: string,
+    /// The native client is unusable. A provider rebuilds a binding-owned
+    /// producer before its next operation; a workload holding a consumer
+    /// resource must close it and open a new consumer. Reached mainly by
+    /// the idempotent and transactional producer.
+    fatal: bool,
+    /// The identical operation may be retried as-is.
+    retriable: bool,
+    /// The in-flight transaction must be aborted before any further
+    /// transactional work.
+    txn-requires-abort: bool,
+  }
+}
+
+/// Binding-scoped Kafka consumption, with and without group coordination.
+///
+/// The import binding is the consumer capability: it fixes the Kafka identity
+/// and client policy before execution. The returned resource remains explicit
+/// because it owns real session state — group membership, assignment, cursor,
+/// paused partitions, streams and shutdown — and several resources opened from
+/// one binding are distinct members of its configured group.
+/// ## Every function is `async`
+///
+/// Including the ones that only read local state —
+/// `assignment`, `position` — which is not how they would be written for a native
+/// implementation. A host *component* plugin's capabilities are installed on a
+/// caller's linker as concurrent host functions, and a sync `func` fails to bind
+/// there with "type mismatch with async". One sync function is therefore enough
+/// to make the whole interface unservable from a component, and this package's
+/// `host-plugin` world describes exactly that deployment. An async lift costs a
+/// native implementation nothing — the body returns without suspending — so this
+/// is the version that both kinds of provider can serve.
+@since(version = 0.1.0)
+interface consumer {
+  @since(version = 0.1.0)
+  use types.{error, consumed-record, partition-ref, partition-offset, partition-result, partition, position, watermarks, timestamp-ms};
+
+  /// How the group negotiates partition movement.
+  @since(version = 0.1.0)
+  enum rebalance-protocol {
+    /// Not in a group, or not yet joined.
+    none,
+    /// Stop-the-world: the whole assignment is revoked, then reassigned.
+    eager,
+    /// Only the partitions that actually move are revoked.
+    cooperative,
+  }
+
+  /// A change to this consumer's assignment.
+  @since(version = 0.1.0)
+  variant rebalance-event {
+    /// Partitions being added. Accept with `assign` under the `eager`
+    /// protocol, or `incremental-assign` under `cooperative`.
+    assign(list<partition-ref>),
+    /// Partitions being taken away. Commit progress on them first — once
+    /// acknowledged, their offsets can no longer be committed.
+    revoke(list<partition-ref>),
+    /// The assignment was lost without a clean revoke, typically after
+    /// falling out of the group. Offsets for these partitions can no
+    /// longer be committed and another member may already own them.
+    lost(list<partition-ref>),
+  }
+
+  /// A consumer client.
+  ///
+  /// Holds group membership and its heartbeat. The heartbeat is driven by the
+  /// record stream, so a consumer whose stream is not being read will
+  /// eventually be evicted from its group and have its partitions reassigned
+  /// — the async equivalent of exceeding `max.poll.interval.ms`.
+  @since(version = 0.1.0)
+  resource consumer {
+    /// Open a consumer from this import binding.
+    ///
+    /// The binding fixes the brokers, credentials, group identity, offset
+    /// behavior, isolation level, assignment strategy, fetch policy and
+    /// client limits before the component runs. Guest code cannot provide
+    /// or override a client property. `consumer.group.id` is required for
+    /// `subscribe`; without it only manual `assign` is available.
+    ///
+    /// # Typical errors
+    /// - `invalid-config`: an unknown or malformed property.
+    /// - `invalid-group-id`: `group.id` missing or rejected.
+    @since(version = 0.4.0)
+    open: static async func() -> result<consumer, error>;
+    /// Join a group and let it assign partitions for these topics.
+    ///
+    /// Replaces any previous subscription. A name beginning with `^` is
+    /// treated as a regular expression. Resolving does not mean partitions
+    /// are assigned — that arrives on `rebalances` once the group settles.
+    /// A provider must reject a regular expression when the binding has a
+    /// finite literal topic grant, because comparing the expression text to
+    /// that list cannot prove which topics it will match.
+    @since(version = 0.1.0)
+    subscribe: async func(topics: list<string>) -> result<_, error>;
+    /// Leave the group and drop the assignment.
+    @since(version = 0.1.0)
+    unsubscribe: async func() -> result<_, error>;
+    /// The topics currently subscribed to.
+    @since(version = 0.1.0)
+    subscription: async func() -> result<list<string>, error>;
+    /// Replace the assignment outright, bypassing group coordination.
+    ///
+    /// An empty list clears it. Use for manual assignment, or to accept an
+    /// `eager` rebalance.
+    @since(version = 0.1.0)
+    assign: async func(partitions: list<partition-ref>) -> result<_, error>;
+    /// Add to the assignment. Only valid under the `cooperative` protocol.
+    @since(version = 0.1.0)
+    incremental-assign: async func(partitions: list<partition-ref>) -> result<_, error>;
+    /// Remove from the assignment. Only valid under `cooperative`.
+    @since(version = 0.1.0)
+    incremental-unassign: async func(partitions: list<partition-ref>) -> result<_, error>;
+    /// The partitions currently assigned.
+    @since(version = 0.1.0)
+    assignment: async func() -> result<list<partition-ref>, error>;
+    /// Whether the assignment was lost without a clean revoke. Offsets for
+    /// a lost assignment can no longer be committed.
+    @since(version = 0.1.0)
+    assignment-lost: async func() -> bool;
+    /// Which rebalance protocol the group negotiated.
+    @since(version = 0.1.0)
+    rebalance-protocol: async func() -> rebalance-protocol;
+    /// The stream of records from the assigned partitions, plus a future
+    /// carrying the terminal error if the stream ends abnormally.
+    ///
+    /// **Callable once.** A second call fails with `state` rather
+    /// than handing back a second reader: two readers of one consumer would
+    /// each receive part of the stream, and neither could tell that it had.
+    ///
+    /// Reading it is what drives group heartbeats, so it must be read
+    /// continuously even when the records are not needed — a consumer whose
+    /// stream is parked is a consumer about to be evicted.
+    ///
+    /// The stream ends cleanly on `close`. It ends with an error in the
+    /// future on a fatal client error.
+    @since(version = 0.1.0)
+    records: async func() -> result<tuple<stream<consumed-record>, future<result<_, error>>>, error>;
+    /// The stream of assignment changes.
+    ///
+    /// **Callable once.** A second call fails with `state`, for the same
+    /// reason as `records`.
+    ///
+    /// Rebalances are a stream rather than a callback because a WIT import
+    /// cannot call back into the guest; this is the async counterpart of
+    /// librdkafka's `rebalance_cb`.
+    ///
+    /// Ignoring it is not fatal — the client falls back to its default
+    /// assignment behaviour — but revocations then pass unobserved, which
+    /// is how duplicate processing starts.
+    @since(version = 0.1.0)
+    rebalances: async func() -> result<stream<rebalance-event>, error>;
+    /// Commit progress to the group coordinator, resolving once the
+    /// coordinator confirms. This is a broker round trip, not a local
+    /// note: what it writes is what a restart resumes from.
+    ///
+    /// Offsets are the position to resume at, so one past the last record
+    /// processed. An empty `offsets` commits the positions already stored
+    /// for the records this consumer has been handed. The result reports
+    /// per-partition outcomes.
+    ///
+    /// # Typical errors
+    /// - `rebalance-in-progress`: the group is moving; re-join and retry.
+    /// - `illegal-generation` / `unknown-member-id`: this member was
+    ///   evicted, and these offsets are no longer this consumer's to
+    ///   commit.
+    @since(version = 0.1.0)
+    commit: async func(offsets: list<partition-offset>) -> result<list<partition-result>, error>;
+    /// The group's committed offsets for these partitions, read from the
+    /// coordinator.
+    ///
+    /// This asks what was committed; it commits nothing. An empty
+    /// `partitions` asks about the current assignment. What a restart
+    /// would resume from, as against `position`, which is where this
+    /// consumer has read to locally.
+    @since(version = 0.1.0)
+    committed: async func(partitions: list<partition-ref>) -> result<list<partition-result>, error>;
+    /// The current local read position, which may be ahead of what has
+    /// been committed.
+    @since(version = 0.1.0)
+    position: async func(partitions: list<partition-ref>) -> result<list<partition-result>, error>;
+    /// Move the read position. Takes effect on subsequent records.
+    @since(version = 0.1.0)
+    seek: async func(partitions: list<partition-ref>, to: position) -> result<_, error>;
+    /// Stop fetching these partitions while keeping them assigned.
+    @since(version = 0.1.0)
+    pause: async func(partitions: list<partition-ref>) -> result<_, error>;
+    /// Resume fetching paused partitions.
+    @since(version = 0.1.0)
+    resume: async func(partitions: list<partition-ref>) -> result<_, error>;
+    /// Low and high watermarks, queried from the broker.
+    @since(version = 0.1.0)
+    watermark-offsets: async func(topic: string, partition: partition) -> result<watermarks, error>;
+    /// For each partition, the earliest offset whose timestamp is at or
+    /// after the given time.
+    ///
+    /// Partitions with no such record come back with no offset.
+    @since(version = 0.1.0)
+    offsets-for-times: async func(partitions: list<partition-ref>, time: timestamp-ms) -> result<list<partition-result>, error>;
+    /// Leave the group cleanly, committing final offsets if auto-commit is
+    /// enabled, and end the record stream.
+    ///
+    /// Worth awaiting rather than just dropping the resource: it triggers
+    /// an immediate rebalance instead of making the group wait out the
+    /// session timeout.
+    @since(version = 0.1.0)
+    close: async func() -> result<_, error>;
+  }
+}
+
+/// Receiving records that a provider pushed, rather than reading a stream.
+///
+/// The counterpart to `consumer`: there, a workload holds a `consumer` resource
+/// and pulls from `records()`, which obliges it to be long-lived — something has
+/// to own the stream and keep the group heartbeat alive between reads. Exporting
+/// `handler` inverts that. The provider does the holding, and calls a workload
+/// only when there is a batch for it, so the workload can be an ordinary
+/// per-request component that does not exist between batches.
+///
+/// That shape is what a bursty topic wants: instances start when there is work
+/// and retire when the burst drains, rather than one long-lived consumer
+/// holding a stream between bursts.
+///
+/// How *wide* that goes is the partition count, not the record count. A
+/// provider reads each partition independently and calls a workload with a
+/// batch from one of them, so a hundred records spread over ten partitions can
+/// occupy ten instances at once, while a hundred on a single partition are one
+/// call after another — the same ordering rule Kafka gives every consumer.
+/// Size partitions for the concurrency you want; replicas and pools divide
+/// that up, they do not multiply it.
+///
+/// ## This is possible from a host component plugin
+///
+/// It was not always. A component plugin's imports resolve against the host's
+/// own plugins, never against workloads, so for a while a plugin genuinely had
+/// no way to invoke an export on a workload and delivery had to be initiated
+/// from the workload side. `wasmcloud:host/workload-call` removed that
+/// restriction: a plugin opens a target for a workload id and an interface, and
+/// calls it. A plugin that pushes imports this interface and holds such a
+/// target; the workload exports it.
+///
+/// ## Delivery semantics
+///
+/// - **At least once.** Offsets move only after `handle` returns `ok`. An
+///   error, a stopped workload, or a provider restart mid-batch all leave them
+///   where they were and the records are redelivered, so an idempotent handler
+///   is a requirement rather than a nicety.
+/// - **One partition per call.** Every record in a batch comes from the same
+///   partition, in offset order. Kafka orders within a partition and commits one
+///   offset per partition, so partitions are exactly the pieces that can be
+///   handled — and committed — independently. A provider is free to dispatch
+///   different partitions concurrently, and that is where the parallelism comes
+///   from: more of it means more partitions, the same answer Kafka gives every
+///   other consumer.
+/// - **An error means "not handled".** `transient` asks for redelivery;
+///   `permanent` says redelivery is pointless and the batch should be
+///   dead-lettered now, because holding a partition hostage to one bad batch
+///   stops every record behind it. A provider that only counts attempts has to
+///   wait out the retries to reach the same conclusion.
+@since(version = 0.2.0)
+interface handler {
+  @since(version = 0.2.0)
+  use types.{consumed-record, offset};
+
+  /// Why a batch was not handled.
+  ///
+  /// A variant rather than `types.error`, for two reasons. The host requires
+  /// one: a provider *imports* this for a workload to export, and the call can
+  /// trap or the workload can stop mid-call, so the host has to be able to
+  /// build the error arm itself to report that — which it cannot do for a
+  /// record. And it is the better shape regardless, because the distinction
+  /// below is the one thing the handler knows and the provider cannot infer.
+  /// Without it a provider can only count attempts and hope.
+  @since(version = 0.2.0)
+  variant handler-error {
+    /// Try again. The batch may succeed later — a dependency was
+    /// unavailable, a lock was held, a quota was spent.
+    transient(option<string>),
+    /// Do not try again. This batch will never succeed, so redelivering it
+    /// only stalls the partition behind it; dead-letter it now.
+    permanent(option<string>),
+  }
+
+  /// Handle one batch, which is never empty.
+  ///
+  /// Returns **how far the batch was handled**, which is what allows a
+  /// handler to make progress it does not have to repeat:
+  ///
+  /// - `ok(none)` — the whole batch. The provider commits past its last
+  ///   record.
+  /// - `ok(some(offset))` — handled through `offset` inclusive, and no
+  ///   further. The provider commits past that one and redelivers the rest.
+  ///   A handler that processes seven of ten records can keep the seven
+  ///   instead of failing the batch and being given all ten again.
+  /// - `error` — none of it was handled. See `handler-error`.
+  ///
+  /// An offset outside the batch is a caller error and the provider treats it
+  /// as `error`: committing past records it never delivered would drop them.
+  ///
+  /// `async` because the provider awaits the result before committing, and
+  /// because a handler that does real work needs somewhere to await its own
+  /// imports from.
+  @since(version = 0.2.0)
+  handle: async func(records: list<consumed-record>) -> result<option<offset>, handler-error>;
+}
+
+/// Binding-scoped Kafka publishing.
+///
+/// Importing this interface grants a component one producer capability. The
+/// import binding fixes the brokers, credentials, transport, client policy and
+/// topic grant before the component runs. A named import selects a different
+/// admitted binding; no function accepts a connection or client configuration.
+///
+/// The provider owns and reuses the native producer behind the binding. It may
+/// share connections, metadata and batching state across concurrent component
+/// instances without exposing that client as guest-owned state. Each operation
+/// still has its own completion boundary, so one invocation never needs to
+/// flush another invocation's queue.
+///
+/// Every function is `async`. A host component plugin installs concurrent host
+/// functions on the caller's linker, and a synchronous function cannot be
+/// served by that path.
+@since(version = 0.1.0)
+interface producer {
+  @since(version = 0.4.0)
+  use types.{error, produce-record, produce-ack, partition, watermarks};
+
+  /// Produce one record and resolve with its delivery report.
+  ///
+  /// The provider must check `topic` against this binding's topic grant
+  /// before enqueueing the record.
+  ///
+  /// # Typical errors
+  /// - `msg-timed-out`: not acknowledged within `message.timeout.ms`.
+  /// - `queue-full`: the binding's bounded local queue is full.
+  /// - `unknown-topic-or-part`: the topic is absent and auto-create is off.
+  /// - `not-leader-for-partition`: leadership moved; retry after refresh.
+  @since(version = 0.4.0)
+  send: async func(topic: string, %record: produce-record) -> result<produce-ack, error>;
+
+  /// Produce many records to one topic.
+  ///
+  /// The result is positional: entry N is the delivery outcome for record N.
+  /// Records are enqueued before their delivery reports are awaited so the
+  /// provider can batch them. A record rejected before enqueue appears as an
+  /// error in its position; it does not fail unrelated entries.
+  @since(version = 0.4.0)
+  send-batch: async func(topic: string, records: list<produce-record>) -> result<list<result<produce-ack, error>>, error>;
+
+  /// Produce a stream of records with backpressure.
+  ///
+  /// The provider stops reading while its bounded queues are full. The
+  /// returned future resolves only after the input ends and every record the
+  /// provider accepted has a delivery outcome. A record becomes accepted when
+  /// the provider has reserved its bounded capacity and taken it from the
+  /// input stream. If the workload, binding or provider stops first, the
+  /// future reports an error because accepted records may have an unknown
+  /// outcome.
+  ///
+  /// A provider may impose a documented per-record size limit when its
+  /// component runtime cannot determine a streamed item's size before
+  /// lowering it into host memory.
+  @since(version = 0.4.0)
+  send-stream: async func(topic: string, records: stream<produce-record>) -> future<result<_, error>>;
+
+  /// Partition count for a granted topic.
+  @since(version = 0.4.0)
+  partition-count: async func(topic: string) -> result<u32, error>;
+
+  /// Low and high watermarks for a granted topic partition.
+  @since(version = 0.4.0)
+  watermark-offsets: async func(topic: string, partition: partition) -> result<watermarks, error>;
+}
+
+/// Binding-scoped transactional Kafka publishing.
+///
+/// This is a separate capability from `producer`. Its binding supplies a
+/// stable `transactional.id` and, when `send-offsets` is used, a
+/// `transaction.group.id`. Keeping it separate prevents ordinary concurrent
+/// sends from joining a transaction implicitly and lets an operator grant
+/// transactional authority independently.
+///
+/// The provider owns the native producer. `begin` leases its single Kafka
+/// transaction slot and returns the stateful resource through which every
+/// participating send is made. The initial contract permits one active
+/// transaction per binding; a concurrent `begin` fails with `state` or a
+/// retriable resource error.
+///
+/// Each simultaneously live producer needs a distinct stable
+/// `transactional.id`. Deploying the same ID on two hosts or replicas causes
+/// Kafka to fence one of them. Elastic transaction pools therefore require an
+/// external stable-ID allocation scheme; this interface does not invent one.
+@since(version = 0.5.0)
+interface transaction {
+  @since(version = 0.5.0)
+  use types.{error, produce-record, produce-ack, partition-offset, partition, watermarks};
+
+  /// One transaction on this binding's producer.
+  ///
+  /// The resource is a strict state machine. Producing and `send-offsets`
+  /// are valid while active. Exactly one of `commit`, `abort` or resource
+  /// drop ends it. Calls made after a terminal operation fail with `state`.
+  /// On an error with `txn-requires-abort`, the only valid terminal operation
+  /// is `abort`. A fatal error retires the binding's native client.
+  @since(version = 0.5.0)
+  resource transaction {
+    /// Produce one record as part of this transaction.
+    @since(version = 0.5.0)
+    send: async func(topic: string, %record: produce-record) -> result<produce-ack, error>;
+    /// Produce many records as part of this transaction.
+    ///
+    /// Results are positional, as in `producer.send-batch`.
+    @since(version = 0.5.0)
+    send-batch: async func(topic: string, records: list<produce-record>) -> result<list<result<produce-ack, error>>, error>;
+    /// Stream records into this transaction with bounded backpressure.
+    ///
+    /// A concurrent `commit` or `abort` closes stream admission. Permits
+    /// already granted may finish enqueueing, which defines the accepted
+    /// prefix. `commit` waits for that prefix and includes it; `abort`
+    /// waits until no operation can enqueue and discards the transaction.
+    /// The stream future reports `state` when terminal finalization
+    /// truncates its input, so the caller cannot mistake the prefix for the
+    /// complete stream.
+    @since(version = 0.5.0)
+    send-stream: async func(topic: string, records: stream<produce-record>) -> future<result<_, error>>;
+    /// Add consumer offsets to this transaction.
+    ///
+    /// Offsets are the positions to resume at, normally one past the last
+    /// record processed. The provider validates every topic and uses the
+    /// binding's fixed `transaction.group.id`; the guest cannot select or
+    /// disturb another consumer group.
+    @since(version = 0.5.0)
+    send-offsets: async func(offsets: list<partition-offset>) -> result<_, error>;
+    /// Commit after every accepted send has reached a delivery outcome.
+    @since(version = 0.5.0)
+    commit: async func() -> result<_, error>;
+    /// Stop accepting sends and discard the transaction.
+    @since(version = 0.5.0)
+    abort: async func() -> result<_, error>;
+  }
+
+  /// Initialize this binding's transactional client and begin a transaction.
+  ///
+  /// Initialization fences a previous producer using the same stable
+  /// `transactional.id`. The returned resource owns the binding's transaction
+  /// slot until commit, abort or bounded drop cleanup finishes.
+  @since(version = 0.5.0)
+  begin: async func() -> result<transaction, error>;
+
+  /// Partition count for a granted topic.
+  @since(version = 0.5.0)
+  partition-count: async func(topic: string) -> result<u32, error>;
+
+  /// Low and high watermarks for a granted topic partition.
+  @since(version = 0.5.0)
+  watermark-offsets: async func(topic: string, partition: partition) -> result<watermarks, error>;
+}
+
+/// A workload that publishes without owning a Kafka client.
+@since(version = 0.1.0)
+world producer-client {
+  @since(version = 0.1.0)
+  import types;
+  @since(version = 0.1.0)
+  import producer;
+}
+/// A workload that publishes Kafka transactions without consuming.
+@since(version = 0.4.0)
+world transactional-producer-client {
+  @since(version = 0.4.0)
+  import types;
+  @since(version = 0.5.0)
+  import transaction;
+}
+/// A long-lived pull consumer service.
+///
+/// The service owns a `consumer` resource and continuously reads its record
+/// stream. It remains alive to drive polling and group membership. Event-driven
+/// components should export `handler` instead.
+@since(version = 0.1.0)
+world consumer-service {
+  @since(version = 0.1.0)
+  import types;
+  @since(version = 0.1.0)
+  import consumer;
+
+  /// Called once and expected to run for the service lifetime.
+  @since(version = 0.1.0)
+  export wasi:cli/run@0.3.0;
+}
+/// A long-lived transactional read-process-write service.
+///
+/// The consumer and transaction bindings must name the same consumer group
+/// when offsets and produced records need to commit atomically.
+@since(version = 0.1.0)
+world processor-service {
+  @since(version = 0.1.0)
+  import types;
+  @since(version = 0.1.0)
+  import consumer;
+  @since(version = 0.5.0)
+  import transaction;
+
+  @since(version = 0.1.0)
+  export wasi:cli/run@0.3.0;
+}
+/// The Kafka capability implemented as a wasmCloud host component plugin.
+///
+/// One long-lived host-scoped plugin serves every workload, while each workload
+/// binding retains its own Kafka identity, authorization and resource accounting.
+///
+/// ## Bindings are capabilities
+///
+/// A guest never supplies a broker, credential, group or arbitrary client
+/// property to a WIT function. The workload's resolved host-interface binding
+/// supplies them before the component runs. A plain import uses the unnamed
+/// binding. A named import, written with `(implements ...)`, selects a named
+/// binding and is the explicit way to grant another cluster, principal, group
+/// or client policy.
+///
+/// A provider must retain interface declarations per binding. Unioning all
+/// `cosmonic:kafka` interfaces across a component can grant a named import an
+/// interface declared only on another binding.
+///
+/// The provider owns native clients:
+///
+/// - one ordinary producer may be shared by concurrent instances of a component
+///   using the same producer binding;
+/// - a transaction binding owns a producer with one active transaction slot;
+/// - every `consumer.open()` creates a distinct, bounded consumer session; and
+/// - a handler binding owns the consumer and dispatches batches into the
+///   workload.
+///
+/// Clients and their queues are bounded host resources. A provider must enforce
+/// limits on binding count, live pull consumers, streams, buffered bytes and
+/// native client configuration.
+///
+/// ## Binding configuration
+///
+/// Configuration is resolved from `config`, `configFrom` and `secretFrom`
+/// according to the host's layering rules. Broker addresses and non-secret
+/// policy usually live in `config`; credentials belong in `secretFrom`.
+///
+/// `topics` is a comma-separated authorization grant for guest-selected topic
+/// operations. Absence grants no guest-selected topic. `*` grants every topic
+/// allowed by the Kafka principal. The provider checks it for producing,
+/// subscribing, assigning, seeking, offset operations and metadata queries. A
+/// finite literal grant cannot safely authorize a regex subscription.
+///
+/// The remaining keys are native Kafka client properties unless the provider
+/// documents a narrower portable subset. Unknown, malformed or unsupported
+/// properties fail binding or client initialization; silently ignoring a
+/// durability, authentication or isolation property changes the contract.
+///
+/// ### Ordinary producer
+///
+/// ```yaml
+/// hostInterfaces:
+///   - namespace: cosmonic
+///     package: kafka
+///     version: "0.5.0"
+///     interfaces: [producer]
+///     config:
+///       bootstrap.servers: kafka.svc:9092
+///       topics: orders.created,orders.updated
+///       acks: all
+///       compression.type: zstd
+///     secretFrom:
+///       - kafka-orders-credentials
+/// ```
+///
+/// The imported interface is the producer capability. There is no producer
+/// `open`, `close` or global `flush`: each send operation reports its own
+/// delivery outcome, and the provider retains the shared native client for the
+/// binding lifecycle.
+///
+/// ### Pull consumer
+///
+/// ```yaml
+/// hostInterfaces:
+///   - name: orders-reader
+///     namespace: cosmonic
+///     package: kafka
+///     version: "0.5.0"
+///     interfaces: [consumer]
+///     config:
+///       bootstrap.servers: kafka.svc:9092
+///       topics: orders.created,orders.updated
+///       consumer.group.id: order-indexer
+///       auto.offset.reset: earliest
+///       enable.auto.commit: "false"
+///       isolation.level: read_committed
+/// ```
+///
+/// `consumer.group.id` is translated to the native client's `group.id`.
+/// Keeping the plugin-owned spelling distinct prevents the same binding's
+/// producer client from receiving a consumer-only property. Without it, the
+/// guest may use manual assignment but `subscribe` fails with
+/// `invalid-group-id`.
+///
+/// Several `open()` calls create several bounded members of the same group.
+/// If a binding configures `group.instance.id`, a provider should permit only
+/// one live handle because duplicate static identities fence each other.
+///
+/// ### Transactional producer
+///
+/// ```yaml
+/// hostInterfaces:
+///   - name: orders-tx
+///     namespace: cosmonic
+///     package: kafka
+///     version: "0.5.0"
+///     interfaces: [transaction]
+///     config:
+///       bootstrap.servers: kafka.svc:9092
+///       topics: orders.input,orders.output
+///       transactional.id: order-processor-0
+///       transaction.group.id: order-processor
+/// ```
+///
+/// `transactional.id` is required and must remain stable across restart for
+/// Kafka fencing and recovery. `transaction.group.id` is required only when
+/// the workload calls `send-offsets`. The guest cannot select a group at call
+/// time. A binding must not grant both `producer` and `transaction` over the
+/// same native producer; declare separate bindings when both are needed.
+/// Every simultaneously live replica needs a distinct stable transactional ID;
+/// reusing one across hosts causes Kafka producer fencing.
+///
+/// ### Host-driven handler
+///
+/// ```yaml
+/// hostInterfaces:
+///   - namespace: cosmonic
+///     package: kafka
+///     version: "0.5.0"
+///     interfaces: [handler, producer]
+///     config:
+///       bootstrap.servers: kafka.svc:9092
+///       topics: orders.input,orders.output,orders.dlq
+///       handler.topics: orders.input
+///       handler.group.id: order-transformer
+///       handler.batch.size: "32"
+///       dead-letter.topic: orders.dlq
+/// ```
+///
+/// `handler.topics` is the subscription; `topics` is the authorization
+/// ceiling for all topic operations on the binding. The names differ because a
+/// handler often reads one topic and produces to another. `handler.group.id`
+/// is the provider-owned consumer group. `handler.batch.size` is the maximum
+/// records dispatched in one call. `dead-letter.topic` receives a permanent
+/// failure and must itself be inside the topic grant.
+///
+/// The provider should reject a handler binding that omits
+/// `bootstrap.servers`, `handler.topics`, `handler.group.id` or
+/// `dead-letter.topic` during binding. It should also reject a transaction
+/// binding without `transactional.id` and resource settings above host ceilings
+/// before work is scheduled. A pull consumer without `consumer.group.id`
+/// remains valid for manual assignment; its `subscribe` call fails.
+///
+/// ## Consumption models
+///
+/// A pull consumer is a stateful service API. Its resource owns group
+/// membership, assignment, positions, streams, paused partitions and close.
+/// The no-argument constructor prevents a guest from selecting a different
+/// Kafka identity while preserving advanced controls such as manual assignment,
+/// seek and explicit commits.
+///
+/// A handler is the serverless API. The provider polls Kafka and keeps group
+/// membership stable, then invokes a component only when a partition has work.
+/// Calls from different partitions may run concurrently. Calls for one
+/// partition remain ordered and do not overlap. Scaling compute therefore does
+/// not add one Kafka group member per Wasm instance.
+///
+/// Handler delivery is at least once. Offsets move only after the handler
+/// reports progress. A trap, timeout, stopped workload, provider restart or
+/// uncertain handoff can redeliver records, so handlers must be idempotent.
+@since(version = 0.1.0)
+world host-plugin {
+  @since(version = 0.1.0)
+  import wasmcloud:host/types@0.1.3;
+  /// Identifies the calling workload for capability and metric routing.
+  @since(version = 0.1.0)
+  import wasmcloud:host/identity@0.1.3;
+  /// Cooperative cancellation for long Kafka operations.
+  @since(version = 0.1.0)
+  import wasmcloud:host/cancel@0.1.3;
+  @since(version = 0.2.0)
+  import types;
+  /// Imported because the workload exports it and the plugin calls into it.
+  @since(version = 0.2.0)
+  import handler;
+  @since(version = 0.2.0)
+  import wasmcloud:host/workload-call@0.1.3;
+
+  @since(version = 0.1.0)
+  export types;
+  @since(version = 0.1.0)
+  export producer;
+  @since(version = 0.5.0)
+  export transaction;
+  @since(version = 0.1.0)
+  export consumer;
+  /// Per-workload provisioning and cleanup.
+  @since(version = 0.1.0)
+  export wasmcloud:host/workload-lifecycle@0.1.3;
+}
+/// A workload that receives Kafka batches on demand.
+///
+/// The provider owns polling, heartbeats, assignment, retries and commits. The
+/// workload holds no consumer resource, so instances can appear for active
+/// partitions and retire when the burst drains.
+@since(version = 0.2.0)
+world record-handler {
+  @since(version = 0.2.0)
+  import types;
+  /// Handling a batch commonly produces a result through the same binding.
+  @since(version = 0.2.0)
+  import producer;
+
+  @since(version = 0.2.0)
+  export handler;
+}

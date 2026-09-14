@@ -1,0 +1,29 @@
+build:
+  # wasm32-wasip2 is required: `cosmonic:kafka@0.5.0`'s functions are all
+  # `async func`, which needs the p3 bindings wit-bindgen generates on top of
+  # a p2 core module.
+  command: cargo build --target wasm32-wasip2 --release
+  component_path: target/wasm32-wasip2/release/line_dashboard.wasm
+
+# The dashboard's binding: a handler over line.metrics (the one
+# instrumentation path), the four DLQ topics (exact counts + origin headers)
+# and the two disposition ledgers read_committed (the live duplicate check).
+# Its own dead-letter.topic is required like every handler's. The wasi:http
+# ingress is inferred from the world.
+workload:
+  allowedHosts: []
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: "0.5.0"
+      interfaces:
+        - handler
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        handler.topics: line.metrics,dieattach.dlq,wirebond.dlq,inspect.dlq,mold.dlq,lot.disposition,lot.disposition.twin
+        topics: line.metrics,line.metrics.dlq,dieattach.dlq,wirebond.dlq,inspect.dlq,mold.dlq,lot.disposition,lot.disposition.twin
+        handler.group.id: line-dashboard
+        auto.offset.reset: earliest
+        dead-letter.topic: line.metrics.dlq
+        isolation.level: read_committed

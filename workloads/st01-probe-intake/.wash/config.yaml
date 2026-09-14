@@ -1,0 +1,21 @@
+build:
+  # wasm32-wasip2 is required: `cosmonic:kafka@0.5.0`'s functions are all
+  # `async func`, which needs the p3 bindings wit-bindgen generates on top of
+  # a p2 core module.
+  command: cargo build --target wasm32-wasip2 --release
+  component_path: target/wasm32-wasip2/release/st01_probe_intake.wasm
+
+# ST-01's binding: the host-owned producer with a grant for the lots topic
+# and line.metrics. The wasi:http ingress is inferred from the world.
+workload:
+  allowedHosts: []
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: "0.5.0"
+      interfaces:
+        - producer
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        topics: probe.lots,line.metrics

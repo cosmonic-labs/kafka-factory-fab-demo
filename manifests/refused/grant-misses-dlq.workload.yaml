@@ -1,0 +1,28 @@
+# Demo beat 2: a handler whose `topics` grant misses its dead-letter.topic.
+# The apply is accepted, then the BIND fails permanently — Failed, no retry —
+# in the plugin's own words. scripts/beats.sh refuse applies it, shows the
+# state and the message, and deletes it.
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: Workload
+metadata:
+  name: "st07-refused-grant"
+  namespace: default
+spec:
+  hostInterfaces:
+    - namespace: cosmonic
+      package: kafka
+      version: 0.5.0
+      interfaces: [handler]
+      config:
+        bootstrap.servers: 127.0.0.1:9092
+        broker.address.family: v4
+        handler.topics: "dieattach.readings"
+        # The grant covers the subscription but NOT dieattach.dlq.
+        topics: "dieattach.readings"
+        handler.group.id: "st07-refused"
+        dead-letter.topic: "dieattach.dlq"
+  components:
+    - name: processor
+      image: oci.localhost:8200/apps/st02-die-attach:0.1.0
+      localResources:
+        allowedHosts: []

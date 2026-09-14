@@ -1,0 +1,7 @@
+{
+  "name": "shift-change",
+  "frames": 60,
+  "next": "baseline",
+  "overlay": false,
+  "note": "06:00 shift change: 100x lots, 2x mold telemetry, then baseline by itself"
+}
