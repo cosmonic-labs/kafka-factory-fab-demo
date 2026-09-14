@@ -245,20 +245,6 @@ abort_if_failed
 # ------------------------------------------------------------------- 9. apply
 step "9. apply (dashboard, simulator, stations)"
 # The naive swap replaces the same workload name so the group and the DLQ stay.
-# The dashboard folds line.metrics from the beginning: its in-memory model
-# starts empty on every (re)start, so its group is reset before the apply —
-# otherwise a rerun counts "produced" from now but "consumed" from the
-# stations' whole history.
-if [ "$(workload_state fab-line-dashboard)" != absent ]; then
-  cosmo_delete fab-line-dashboard >/dev/null
-  for _ in $(seq 1 20); do [ "$(workload_state fab-line-dashboard)" = absent ] && break; sleep 1; done
-fi
-for _ in $(seq 1 10); do
-  rpk group delete line-dashboard >/dev/null 2>&1 && break
-  rpk group describe line-dashboard 2>/dev/null | grep -qE '^MEMBERS\s+0|^STATE\s+(Dead|Empty)' && { rpk group delete line-dashboard >/dev/null 2>&1; break; }
-  sleep 1
-done
-info "fab-line-dashboard group reset: the dashboard will fold line.metrics from the beginning"
 for w in "${WORKLOAD_LIST[@]}"; do
   out="$(cosmo_apply "$APPLY_DIR/$w.workload.yaml")"
   if [ "$(api_status)" = "200" ]; then
@@ -269,6 +255,23 @@ for w in "${WORKLOAD_LIST[@]}"; do
   fi
 done
 abort_if_failed
+# The dashboard folds line.metrics from the beginning: its in-memory model
+# starts empty on every (re)start, so its group is reset now that the new
+# spec is applied — stop (the instance and its group member go away), delete
+# the group, start (the instance that comes up folds every partition from
+# offset 0). Deleting and re-applying the workload instead races the
+# reconciler into an extra restart that resumes from the first instance's
+# committed positions. Without this a rerun counts "produced" from now but
+# "consumed" from the stations' whole history.
+api POST /v1/workloads/default/fab-line-dashboard/stop >/dev/null
+for _ in $(seq 1 20); do
+  rpk group describe line-dashboard 2>/dev/null | grep -qE '^MEMBERS\s+0|^STATE\s+(Dead|Empty)' && break
+  rpk group describe line-dashboard >/dev/null 2>&1 || break
+  sleep 1
+done
+rpk group delete line-dashboard >/dev/null 2>&1 || true
+api POST /v1/workloads/default/fab-line-dashboard/start >/dev/null
+info "fab-line-dashboard restarted with its group reset: it folds line.metrics from the beginning"
 names=("${WORKLOAD_LIST[@]/fab-st02-die-attach-naive/fab-st02-die-attach}")
 info "waiting for every workload to report running…"
 for _ in $(seq 1 40); do

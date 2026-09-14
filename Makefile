@@ -1,9 +1,11 @@
 # Meridian Semiconductor, Fab 3 — six cosmonic:kafka workloads on Cosmonic Desktop.
 # `make up` is the whole bring-up; the rest are the demo beats.
 SHELL := /bin/bash
+N ?= 1
+PCT ?= 12
 .DEFAULT_GOAL := help
 
-.PHONY: help up down purge build release validate start stop shift-change poison drift excursion calm status \
+.PHONY: help up down purge build release validate start stop shift-change poison drift excursion calm rate status \
         refuse naive robust broker-restart crash-st06 rollout-st03 probe lint
 
 help: ## this list
@@ -36,6 +38,8 @@ excursion: ## beat 5: 20x inspection jobs for 120 s → ST-04 instances climb to
 	@scripts/sim.sh excursion
 calm: ## back to baseline early
 	@scripts/sim.sh calm
+rate: ## throughput dial: N frames per second on every topic (make rate N=5; N=1 is the design's rates)
+	@scripts/sim.sh rate $(N)
 status: ## the simulator's last heartbeat
 	@scripts/sim.sh status
 

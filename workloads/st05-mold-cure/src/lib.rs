@@ -239,6 +239,7 @@ impl Handler for Component {
                 serde_json::json!({
                     "n": consumed, "presses": summary, "batch": records.len(),
                     "partition": records.first().map(|r| r.partition),
+                    "first": records.first().map(|r| r.offset), "last": records.last().map(|r| r.offset),
                 }),
             ));
             metrics.push(metric("consumed", last_ts, serde_json::json!({"n": consumed, "partition": records.first().map(|r| r.partition)})));

@@ -8,6 +8,7 @@
 #   sim.sh drift         bonder 17's transducer power sags 18% for 90 s (beat 5)
 #   sim.sh excursion     20x inspection jobs for 120 s                 (beat 5)
 #   sim.sh calm          back to baseline early (same as start)
+#   sim.sh rate N        play N frames per second — N× the records/s on every topic (1..60; 1 = the design's rates)
 #   sim.sh status        the simulator's last line.metrics heartbeat
 #
 # Control is a Kafka topic (sim.control): each verb is one JSON record produced
@@ -40,6 +41,7 @@ if not hb:
 ov = hb.get("overlay")
 print("simulator:", "running" if hb.get("running") else "stopped",
       "· scenario", hb.get("scenario"), "· frame", hb.get("frame"),
+      "· rate", str(hb.get("frames_per_tick", 1)) + "x",
       "· overlay", (ov["scenario"] + " frame " + str(ov["frame"])) if ov else "none",
       "· passes", hb.get("passes"), "· heartbeat", str(s.get("age_s")) + "s ago")
 print("produced so far:", ", ".join(f"{k}={v}" for k, v in sorted(s.get("produced", {}).items())))
@@ -51,9 +53,9 @@ print("produced so far:", ", ".join(f"{k}={v}" for k, v in sorted(s.get("produce
     fi
     ;;
   ""|-h|--help)
-    sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     ;;
   *)
-    die "unknown verb '$verb' (start|stop|shift-change|poison|drift|excursion|calm|status)"
+    die "unknown verb '$verb' (start|stop|shift-change|poison|drift|excursion|calm|rate N|status)"
     ;;
 esac

@@ -37,7 +37,7 @@ spec:
         isolation.level: read_committed
   components:
     - name: dashboard
-      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-line-dashboard:0.1.0@sha256:c274df3d230c0d174f0088aa4a2c7d3da29fcf88c4dde2f0a2289f86f1596a06
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-line-dashboard:0.1.0@sha256:a37005d3dcf3554a2eeb37af64fef248f7227d213f8311a9abbba0b1a0000300
       # One warm instance serves both the HTTP page and the Kafka handler, so
       # the fold lives in its memory. maxConcurrency must cover every call
       # that can be in flight at once (13 partition loops + HTTP polls): a

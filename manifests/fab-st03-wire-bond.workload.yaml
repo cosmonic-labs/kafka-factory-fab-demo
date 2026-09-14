@@ -28,7 +28,7 @@ spec:
   # (Desktop drives `run` only under spec.service; docs/DECISIONS.md).
   service:
     name: wire-bond
-    image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st03-wire-bond:0.1.0@sha256:9dbfd39b9e64c38370a4a95a9596c0aa255c34be4b4e7b6679ccca74b9e4ecbe
+    image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st03-wire-bond:0.1.0@sha256:b4e4126459b07d49d5766fecfa255221f9a513bfc0f78218b8e8aacf30b7e7b7
     maxRestarts: 100
     localResources:
       environment:
@@ -45,6 +45,6 @@ spec:
   # never invoked (the service above is what runs).
   components:
     - name: wire-bond
-      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st03-wire-bond:0.1.0@sha256:9dbfd39b9e64c38370a4a95a9596c0aa255c34be4b4e7b6679ccca74b9e4ecbe
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st03-wire-bond:0.1.0@sha256:b4e4126459b07d49d5766fecfa255221f9a513bfc0f78218b8e8aacf30b7e7b7
       localResources:
         allowedHosts: []

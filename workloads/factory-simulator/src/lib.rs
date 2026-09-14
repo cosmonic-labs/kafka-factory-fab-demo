@@ -12,6 +12,7 @@
 //! - `{"cmd":"loop","scenario":"baseline"}`     — switch the loop scenario (idempotent)
 //! - `{"cmd":"play","scenario":"poison"}`       — one-shot overlay on top of the loop
 //! - `{"cmd":"stop"}`                           — stop the loop
+//! - `{"cmd":"rate","frames_per_tick":5}`      — play N frames per tick (N× the records/s; 1..=60)
 //!
 //! A loop scenario declares its own `frames` and `next` (`shift-change` plays
 //! 60 frames then returns to `baseline` by itself); an overlay adds records
@@ -179,6 +180,9 @@ struct State {
     /// One-shot overlays, each at its own frame; several can run at once
     /// (drift and excursion together are demo beat 5).
     overlays: Vec<(String, u32)>,
+    /// Frames played per 1-second tick: the throughput dial (1 = the
+    /// design's rates, N = N× on every topic).
+    frames_per_tick: u32,
     /// Counters for the heartbeat (and the per-pass id stamp).
     passes: u64,
     overlays_played: u64,
@@ -192,6 +196,8 @@ struct Control {
     cmd: String,
     #[serde(default)]
     scenario: Option<String>,
+    #[serde(default)]
+    frames_per_tick: Option<u32>,
 }
 
 fn apply_control(catalog: &Catalog, state: &Shared, raw: &[u8]) {
@@ -209,6 +215,11 @@ fn apply_control(catalog: &Catalog, state: &Shared, raw: &[u8]) {
         "stop" => {
             st.running = false;
             println!("factory-simulator: loop stopped");
+        }
+        "rate" => {
+            let n = ctl.frames_per_tick.unwrap_or(1).clamp(1, 60);
+            st.frames_per_tick = n;
+            println!("factory-simulator: rate → {n} frame(s) per tick");
         }
         "loop" => {
             let name = ctl.scenario.unwrap_or_else(|| "baseline".to_string());
@@ -458,6 +469,7 @@ impl RunGuest for Component {
         let state: Shared = Rc::new(RefCell::new(State {
             running: true,
             scenario: "baseline".to_string(),
+            frames_per_tick: 1,
             passes: 1,
             ..Default::default()
         }));
@@ -476,18 +488,21 @@ impl RunGuest for Component {
             let running = state.borrow().running;
             let mut metrics = Vec::new();
             if running {
-                let (scenario, frame) = {
-                    let st = state.borrow();
-                    (st.scenario.clone(), st.frame)
-                };
-                let produced = play_frame(&catalog, &state, &epoch).await;
-                for (topic, n) in &produced {
-                    metrics.push(metric(
-                        "produced",
-                        serde_json::json!({"topic": topic, "n": n, "scenario": scenario, "frame": frame}),
-                    ));
+                let frames = state.borrow().frames_per_tick.max(1);
+                for _ in 0..frames {
+                    let (scenario, frame) = {
+                        let st = state.borrow();
+                        (st.scenario.clone(), st.frame)
+                    };
+                    let produced = play_frame(&catalog, &state, &epoch).await;
+                    for (topic, n) in &produced {
+                        metrics.push(metric(
+                            "produced",
+                            serde_json::json!({"topic": topic, "n": n, "scenario": scenario, "frame": frame}),
+                        ));
+                    }
+                    advance(&catalog, &state);
                 }
-                advance(&catalog, &state);
             }
             if tick % HEARTBEAT_EVERY == 0 {
                 let st = state.borrow();
@@ -500,6 +515,7 @@ impl RunGuest for Component {
                         "overlay": st.overlays.first().map(|(n, f)| serde_json::json!({"scenario": n, "frame": f})),
                         "overlays": st.overlays.iter().map(|(n, f)| serde_json::json!({"scenario": n, "frame": f})).collect::<Vec<_>>(),
                         "passes": st.passes,
+                        "frames_per_tick": st.frames_per_tick,
                         "epoch": epoch,
                         "controls": st.control_seen,
                     }),

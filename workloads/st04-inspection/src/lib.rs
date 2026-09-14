@@ -226,6 +226,7 @@ impl Handler for Component {
                     "n": produced, "latency_p50_ms": p50, "latency_p95_ms": p95,
                     "defects": defects, "instance": id, "jobs_on_instance": jobs_here,
                     "partition": records.first().map(|r| r.partition),
+                    "first": records.first().map(|r| r.offset), "last": records.last().map(|r| r.offset),
                 }),
             ));
             metrics.push(metric("produced", last_ts, serde_json::json!({"topic": RESULTS_TOPIC, "n": produced})));

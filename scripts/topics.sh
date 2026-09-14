@@ -47,6 +47,11 @@ for entry in "${TOPICS[@]}"; do
 done
 info "topics: $created created, $(( ${#TOPICS[@]} - created )) already present"
 
+# line.metrics keeps 4 h: the dashboard's rings hold no more, and its group
+# is reset on every apply so it replays the topic from the start (~5k
+# records/s) — retention bounds that replay.
+rpk topic alter-config line.metrics --set retention.ms=14400000 >/dev/null 2>&1 || warn "could not set retention on line.metrics"
+
 # Verify partition counts from `rpk topic describe`.
 bad=0
 now="$(rpk topic list 2>/dev/null | awk 'NR>1 {print $1, $2}')"

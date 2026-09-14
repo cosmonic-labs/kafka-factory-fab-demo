@@ -165,6 +165,12 @@ struct Model {
     sim: Value,
     sim_produced: BTreeMap<String, u64>,
     sim_seen: i64,
+    /// Highest input offset folded per (station, partition): a `consumed`
+    /// metric whose offsets fall at or below it is a redelivery (the host
+    /// rewound the batch — a trap, a transient error, a restart), counted as
+    /// such rather than as new records. Exact, and independent of which
+    /// station instance reported.
+    consumed_hw: BTreeMap<String, i64>,
     /// Every fault on the line, newest first.
     faults: VecDeque<Value>,
     /// Last time each (station, text) fault was pushed, for de-duplication.
@@ -179,6 +185,11 @@ struct Model {
     /// served at /api/debug.
     samples: BTreeMap<String, Vec<Value>>,
     unparsed: u64,
+    /// First offset this instance saw per (topic, partition). The fold's
+    /// totals are only comparable when every partition was folded from 0 —
+    /// an instance that took over mid-replay (a daemon restart, a reclaimed
+    /// pool) resumes each partition from a different committed point.
+    first_offset: BTreeMap<String, i64>,
 }
 
 thread_local! {
@@ -281,8 +292,28 @@ fn fold_metric(m: &mut Model, rec: &ConsumedRecord, v: &Value) {
     st.last_seen = ts.max(st.last_seen);
     match kind.as_str() {
         "consumed" => {
-            st.consumed += n;
-            st.ring.add(ts, n);
+            // Offset-exact accounting when the station reports its batch's
+            // offset range: only offsets above the partition's high-water
+            // mark are new; the rest were redelivered.
+            let (mut fresh, mut redelivered) = (n, 0u64);
+            if let (Some(p), Some(first), Some(last)) = (
+                v.get("partition").and_then(Value::as_i64),
+                v.get("first").and_then(Value::as_i64),
+                v.get("last").and_then(Value::as_i64),
+            ) {
+                let key = format!("{station}/{p}");
+                let hw = m.consumed_hw.get(&key).copied().unwrap_or(-1);
+                let span = (last - first + 1).max(0) as u64;
+                let new_span = (last - first.max(hw + 1) + 1).max(0) as u64;
+                // n may be smaller than the span (tombstones skipped); scale.
+                fresh = if span > 0 { n * new_span / span } else { n };
+                redelivered = n - fresh;
+                m.consumed_hw.insert(key, hw.max(last));
+            }
+            let st = m.stations.entry(station.clone()).or_default();
+            st.consumed += fresh;
+            st.redelivered += redelivered;
+            st.ring.add(ts, fresh);
             match station.as_str() {
                 "st02" => {
                     st.bump("in_spec", v.get("in_spec").and_then(Value::as_u64).unwrap_or(0));
@@ -575,6 +606,7 @@ impl Handler for Component {
             m.batches += 1;
             for rec in &records {
                 let key = format!("{}/{}", rec.topic, rec.partition);
+                m.first_offset.entry(key.clone()).or_insert(rec.offset);
                 let seen = m.samples.entry(key).or_default();
                 if seen.len() < 3 {
                     seen.push(json!({
@@ -750,8 +782,23 @@ fn validate_json() -> Value {
                 "rejected": st01.and_then(|s| s.detail.get("rejected").cloned()).unwrap_or(json!(0)),
             }),
         );
+        // Only line.metrics decides completeness (the counts come from it); a
+        // transactional topic's offset 0 is a control record a read_committed
+        // consumer never sees, so its first visible offset is 1.
+        let partial: Vec<String> = m
+            .first_offset
+            .iter()
+            .filter(|(k, o)| k.starts_with("line.metrics/") && **o > 0)
+            .map(|(k, o)| format!("{k}@{o}"))
+            .collect();
         json!({
             "stations": out,
+            "fold": {
+                "complete": partial.is_empty(),
+                "partial_partitions": partial,
+                "uptime_s": (now_ms() - m.started) / 1000,
+                "records": m.metrics_records,
+            },
             "ledger": {"records": m.ledger.records, "units": m.ledger.units.len(), "duplicates": m.ledger.duplicates},
             "twin": {"records": m.twin.records, "units": m.twin.units.len(), "duplicates": m.twin.duplicates},
             "sim": {"heartbeat": m.sim, "produced": m.sim_produced},

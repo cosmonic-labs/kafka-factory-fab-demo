@@ -29,7 +29,7 @@ spec:
         dead-letter.topic: "dieattach.dlq"
   components:
     - name: processor
-      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st02-die-attach:0.1.0@sha256:277b1170ef555407cdc14c59999850f4b549401949115c37afbc5aa130b0460b
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st02-die-attach:0.1.0@sha256:ebeec4e63c4ccc49a5b941cada34c3e6681c0089d73893fd91fd3d25950fef63
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

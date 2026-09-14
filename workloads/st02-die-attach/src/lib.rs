@@ -268,6 +268,7 @@ impl Handler for Component {
                         metrics.push(metric("consumed", last_ts, serde_json::json!({
                             "n": consumed - 1, "in_spec": in_spec, "flags": flags,
                             "cpk": cpk_by_head(&samples), "partition": rec.partition,
+                            "first": records.first().map(|r| r.offset), "last": Some(rec.offset),
                         })));
                         let _ = producer::send_batch(METRICS_TOPIC.to_string(), metrics).await;
                         return handled.map_or(Err(HandlerError::Transient(Some("flag produce failed".into()))), |o| Ok(Some(o)));
@@ -286,6 +287,7 @@ impl Handler for Component {
                     "n": consumed, "in_spec": in_spec, "flags": flags,
                     "cpk": cpk_by_head(&samples),
                     "partition": records.first().map(|r| r.partition),
+                    "first": records.first().map(|r| r.offset), "last": records.last().map(|r| r.offset),
                 }),
             ));
         }

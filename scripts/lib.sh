@@ -275,11 +275,11 @@ print("http://" + addr)
 # http_get <host> <path> — GET through the Desktop ingress with the Host header
 http_get() {
   local host="$1" url_path="$2"; shift 2
-  curl -sS -H "Host: $host" "$(ingress_base)$url_path" "$@"
+  curl -sS -m 30 -H "Host: $host" "$(ingress_base)$url_path" "$@"
 }
 http_post() {
   local host="$1" url_path="$2"; shift 2
-  curl -sS -X POST -H "Host: $host" "$(ingress_base)$url_path" "$@"
+  curl -sS -m 30 -X POST -H "Host: $host" "$(ingress_base)$url_path" "$@"
 }
 
 # ------------------------------------------------------------------ misc ---

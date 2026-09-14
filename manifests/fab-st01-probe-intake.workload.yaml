@@ -32,7 +32,7 @@ spec:
         topics: "probe.lots,line.metrics"
   components:
     - name: intake
-      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st01-probe-intake:0.1.0@sha256:f5b5253f318aad82f3dd05af5b79433b260ff5c249174274ec01f931007a4119
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st01-probe-intake:0.1.0@sha256:8f9379ffd0120bcface6b7dfb96220f796b0477d740eeef0e79b8b8504168d14
       poolSize: 4
       localResources:
         allowedHosts: []
