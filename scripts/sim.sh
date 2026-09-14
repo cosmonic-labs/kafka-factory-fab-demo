@@ -30,6 +30,10 @@ case "$verb" in
   poison)         control '{"cmd":"play","scenario":"poison"}' ;;
   drift)          control '{"cmd":"play","scenario":"drift"}' ;;
   excursion)      control '{"cmd":"play","scenario":"excursion"}' ;;
+  rate)
+    n="${2:-1}"
+    case "$n" in ''|*[!0-9]*) die "rate needs a whole number of frames per second (1..60)" ;; esac
+    control "{\"cmd\":\"rate\",\"frames_per_tick\":$n}" ;;
   status)
     # The dashboard folds the heartbeat; ask it first, fall back to the topic.
     if out="$(http_get "$DASHBOARD_HOST" /api/state 2>/dev/null)" && [ -n "$out" ]; then
