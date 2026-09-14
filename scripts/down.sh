@@ -33,7 +33,8 @@ fi
 step "broker"
 c="$(broker_container || true)"
 if [ "$c" = "fab3-redpanda" ]; then
-  if $PURGE; then compose down -v >/dev/null 2>&1 && pass "broker stopped and volume removed"; else compose stop >/dev/null 2>&1 && pass "broker stopped (volume kept; --purge removes it)"; fi
+  # --profile metrics covers Prometheus/Grafana too when they were started.
+  if $PURGE; then compose --profile metrics down -v >/dev/null 2>&1 && pass "broker, console and metrics stopped; volume removed"; else compose --profile metrics stop >/dev/null 2>&1 && pass "broker, console and metrics stopped (volume kept; --purge removes it)"; fi
 elif [ -n "$c" ]; then
   warn "broker container '$c' is not managed by compose/redpanda.yaml; left running"
   if $PURGE; then

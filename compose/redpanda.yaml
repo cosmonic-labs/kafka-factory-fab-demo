@@ -1,8 +1,14 @@
-# Single-node Redpanda for the Fab 3 line. Kafka API on 127.0.0.1:9092 (what
-# every manifest's bootstrap.servers names), rpk inside the container
-# (scripts/lib.sh runs it with `docker compose exec`). Data lives in a named
-# volume so `docker compose restart redpanda` (demo beat 6) keeps the topics;
-# `scripts/down.sh --purge` removes it.
+# Single-node Redpanda for the Fab 3 line, plus Redpanda Console.
+#
+# Two Kafka listeners: `host` on 127.0.0.1:9092 (what every manifest's
+# bootstrap.servers names — Desktop's plugin dials it from the host), and
+# `docker` on redpanda:29092 for the containers beside it (Console, and the
+# metrics profile). rpk runs inside the container (scripts/lib.sh). Data lives
+# in a named volume so `docker compose restart redpanda` (demo beat 6) keeps
+# the topics; `scripts/down.sh --purge` removes it.
+#
+#   docker compose -f compose/redpanda.yaml up -d                     broker + Console (http://localhost:8090)
+#   docker compose -f compose/redpanda.yaml --profile metrics up -d   + Prometheus + Grafana (http://localhost:3000)
 name: fab3
 services:
   redpanda:
@@ -19,9 +25,9 @@ services:
       - 1G
       - --overprovisioned
       - --kafka-addr
-      - internal://0.0.0.0:9092
+      - host://0.0.0.0:9092,docker://0.0.0.0:29092
       - --advertise-kafka-addr
-      - internal://127.0.0.1:9092
+      - host://127.0.0.1:9092,docker://redpanda:29092
       - --rpc-addr
       - 127.0.0.1:33145
       - --advertise-rpc-addr
@@ -36,5 +42,52 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
+
+  # Redpanda Console: topics, a message browser (the DLQ records with their
+  # origin headers, the sim.control records), consumer groups with lag per
+  # partition, broker overview. http://localhost:8090
+  console:
+    image: docker.redpanda.com/redpandadata/console:v3.1.0
+    container_name: fab3-console
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+      REDPANDA_ADMINAPI_ENABLED: "true"
+      REDPANDA_ADMINAPI_URLS: http://redpanda:9644
+    ports:
+      - "127.0.0.1:8090:8080"
+
+  # Optional (--profile metrics): Prometheus scraping Redpanda's public
+  # metrics and Grafana with Redpanda's own dashboard — throughput (records/s
+  # and bytes/s per topic), consumer lag over time, latency. http://localhost:3000
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: fab3-prometheus
+    profiles: [metrics]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    volumes:
+      - ./metrics/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+  grafana:
+    image: grafana/grafana:12.1.1
+    container_name: fab3-grafana
+    profiles: [metrics]
+    depends_on: [prometheus]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+    volumes:
+      - ./metrics/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./metrics/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+
 volumes:
   redpanda:

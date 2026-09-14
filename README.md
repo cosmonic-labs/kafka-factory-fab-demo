@@ -7,7 +7,9 @@ that plays scripted sensor records onto the topics, and watched through a
 live line dashboard. One command brings it all up and validates it.
 
 The story, the station → template mapping, the dashboard layout and the demo
-script are in **[docs/design.html](docs/design.html)**. The build brief is
+beats are in **[docs/design.html](docs/design.html)**; the presenter's
+script — what to say, run and point at, beat by beat — is
+**[docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md)**. The build brief is
 [PLAN.md](PLAN.md); every place the build deviates from it is in
 [docs/DECISIONS.md](docs/DECISIONS.md); what the build taught us about the
 templates, the plugin, the daemon and the skill is in
@@ -62,6 +64,14 @@ broker.
 Open **http://fab-line-dashboard.localhost:8200/** — six panels in floor order, a
 summary strip, a faults ledger, polling `/api/state` every 2 s.
 
+Two more screens come with the broker: **Redpanda Console** at
+http://localhost:8090/ (topics, a message browser that shows the DLQ
+records' origin headers, consumer groups with lag per partition), and — after
+`make metrics` — **Grafana** at http://localhost:3000/d/fab3-line (records/s
+produced and fetched per topic, lag per group, broker latency, bytes/s; plus
+Redpanda's own broker dashboard at `/d/fab3-redpanda`). Prometheus scrapes
+the broker's `/public_metrics` every 5 s.
+
 Every workload is named `fab-<station>` and labeled
 `app.kubernetes.io/part-of: fab-factory` (plus `app.kubernetes.io/name`,
 `app.kubernetes.io/version` and `fab.meridian.example/station`), so in
@@ -104,8 +114,8 @@ workloads/          one scaffold per workload (cosmonic new rust-kafka-<pattern>
   line-dashboard/ui/index.html                      the page: docs/design.html §6, live
 manifests/          digest-pinned Workload per station on ghcr.io (what --no-build applies); local/ holds a local build's (gitignored); kafka.yaml.example; refused/
 scripts/            run.sh, down.sh, topics.sh, sim.sh, validate.sh, beats.sh, lib.sh
-compose/            single-node Redpanda on 127.0.0.1:9092
-docs/               design.html, icons.svg, DECISIONS.md, LEARNINGS.md
+compose/            single-node Redpanda on 127.0.0.1:9092 + Redpanda Console; metrics/ (Prometheus + Grafana, --profile metrics)
+docs/               design.html, icons.svg, DEMO-SCRIPT.md, DECISIONS.md, LEARNINGS.md
 .github/workflows/  cargo build + wasm-tools checks per workload, shellcheck, the topic contract against Redpanda
 ```
 

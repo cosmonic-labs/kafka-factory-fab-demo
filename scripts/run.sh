@@ -322,6 +322,8 @@ step "Fab 3 is up"
 cat <<EOF
   dashboard   http://$DASHBOARD_HOST:$port/      (Fab 3 Line — polls /api/state every 2 s)
   ST-01       http://$ST01_HOST:$port/lot        (POST a lot JSON; one line per wafer)
+  console     http://localhost:8090/                   (Redpanda Console: topics, messages + headers, consumer-group lag)
+  metrics     make metrics → http://localhost:3000/d/fab3-line   (Grafana: records/s per topic, lag per group, latency)
   on screen   search "fab-" or "fab-factory" in Desktop's Workloads grid (every workload is labeled app.kubernetes.io/part-of=fab-factory)
   validate    make validate                                     (produced == consumed + dlq, lag, duplicates)
   simulator   make start | stop | shift-change | poison | drift | excursion | calm | status
