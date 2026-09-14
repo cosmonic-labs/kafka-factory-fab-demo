@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-.PHONY: help up down purge build validate start stop shift-change poison drift excursion calm status \
+.PHONY: help up down purge build release validate start stop shift-change poison drift excursion calm status \
         refuse naive robust broker-restart crash-st06 rollout-st03 probe lint
 
 help: ## this list
@@ -17,6 +17,8 @@ purge: ## stop everything and remove the broker volume
 	@scripts/down.sh --purge
 build: ## cargo build every workload (no deploy)
 	@for w in workloads/*/; do echo "== $$w"; (cd $$w && cargo build --target wasm32-wasip2 --release) || exit 1; done
+release: ## push every built component to ghcr.io and pin manifests/ to it (needs gh auth with write:packages)
+	@scripts/release.sh
 validate: ## produced == consumed + dlq, every group's lag, the read_committed duplicate check
 	@scripts/validate.sh
 

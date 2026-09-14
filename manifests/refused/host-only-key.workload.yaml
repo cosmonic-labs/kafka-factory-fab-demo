@@ -25,6 +25,6 @@ spec:
         plugin.library.paths: "monitoring-interceptor"
   components:
     - name: processor
-      image: oci.localhost:8200/apps/fab-st02-die-attach:0.1.0
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st02-die-attach:0.1.0
       localResources:
         allowedHosts: []

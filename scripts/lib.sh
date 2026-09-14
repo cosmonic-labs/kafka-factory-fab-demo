@@ -28,7 +28,18 @@ die()  { fail "$@"; exit 1; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/compose/redpanda.yaml"
+# manifests/            committed: digest-pinned to the PUBLIC registry images
+#                       (scripts/release.sh) — what --no-build and a fresh
+#                       machine apply.
+# manifests/local/      what a local build+publish produced (run.sh step 7),
+#                       pinned to Desktop's built-in registry; gitignored.
 MANIFEST_DIR="$REPO_ROOT/manifests"
+LOCAL_MANIFEST_DIR="$REPO_ROOT/manifests/local"
+# manifest_for <name> → the manifest last applied for a workload: the local
+# build when there is one, else the committed one.
+manifest_for() {
+  if [ -f "$LOCAL_MANIFEST_DIR/$1.workload.yaml" ]; then echo "$LOCAL_MANIFEST_DIR/$1.workload.yaml"; else echo "$MANIFEST_DIR/$1.workload.yaml"; fi
+}
 WORKLOAD_DIR="$REPO_ROOT/workloads"
 
 # Every workload, in apply order (dashboard first so it sees every metric,

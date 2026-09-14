@@ -32,7 +32,7 @@ spec:
         topics: "probe.lots,line.metrics"
   components:
     - name: intake
-      image: oci.localhost:8200/apps/fab-st01-probe-intake:0.1.0@sha256:14adfb6702f8971ebba4318bf2c1b8826100c7df24412ee8903b5792d70ae402
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st01-probe-intake:0.1.0@sha256:f5b5253f318aad82f3dd05af5b79433b260ff5c249174274ec01f931007a4119
       poolSize: 4
       localResources:
         allowedHosts: []

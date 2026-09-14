@@ -31,7 +31,7 @@ spec:
         handler.batch.size: "1"
   components:
     - name: inspector
-      image: oci.localhost:8200/apps/fab-st04-inspection:0.1.0@sha256:4cec569a015f015dc2a365b8b31f7d556a360fba466b107682f14ce7609631ae
+      image: ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-st04-inspection:0.1.0@sha256:a4406d7a9f0fba8283280776ec44311bafe0d7c74b0182f3d3c367878551da3c
       # Instances scale with assigned partition work and return to zero.
       poolSize: 32
       maxConcurrency: 1

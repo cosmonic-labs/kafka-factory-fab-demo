@@ -23,4 +23,6 @@ target
 # Rust build output for every workload
 workloads/*/target/
 # a rolling-update manifest beats.sh writes and removes
-manifests/*.rollout.yaml
+
+# local build manifests (Desktop built-in registry digests); the committed manifests/ pin the public images
+manifests/local/

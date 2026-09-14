@@ -172,7 +172,8 @@ if $NAIVE; then
   WORKLOAD_LIST=("${WORKLOAD_LIST[@]/fab-st02-die-attach/fab-st02-die-attach-naive}")
 fi
 if ! $NO_BUILD; then
-  step "7. build, verify and publish each workload"
+  step "7. build, verify and publish each workload (→ manifests/local/)"
+  mkdir -p "$LOCAL_MANIFEST_DIR"
   for w in "${WORKLOAD_LIST[@]}"; do
     dir="$(workload_dir "$w")"; features=()
     if [ "$w" = "fab-st02-die-attach-naive" ]; then dir="$(workload_dir fab-st02-die-attach)"; features=(--features naive); fi
@@ -201,26 +202,27 @@ if ! $NO_BUILD; then
       ref="oci.localhost:8200/apps/fab-st02-die-attach-naive:0.1.0${digest:+@$digest}"
       sed -e "s|image: oci.localhost:8200/apps/fab-st02-die-attach:0.1.0|image: $ref|" \
           -e 's|name: "fab-st02-die-attach"|name: "fab-st02-die-attach"  # the naive build (run.sh --naive)|' \
-          "$(workload_dir fab-st02-die-attach)/workload.yaml" > "$MANIFEST_DIR/fab-st02-die-attach-naive.workload.yaml"
+          "$(workload_dir fab-st02-die-attach)/workload.yaml" > "$LOCAL_MANIFEST_DIR/fab-st02-die-attach-naive.workload.yaml"
       pass "$w: pushed $ref"
       continue
     fi
     digest="$(cosmo_publish "$dir" "$w:0.1.0" false)" || { fail "$w: publish failed: $digest"; failures=$((failures + 1)); continue; }
-    sed "s|image: oci.localhost:8200/apps/$w:0.1.0|image: oci.localhost:8200/apps/$w:0.1.0@$digest|" "$dir/workload.yaml" > "$MANIFEST_DIR/$w.workload.yaml"
-    pass "$w: published oci.localhost:8200/apps/$w:0.1.0@${digest:0:19}… → manifests/$w.workload.yaml"
+    sed "s|image: oci.localhost:8200/apps/$w:0.1.0|image: oci.localhost:8200/apps/$w:0.1.0@$digest|" "$dir/workload.yaml" > "$LOCAL_MANIFEST_DIR/$w.workload.yaml"
+    pass "$w: published oci.localhost:8200/apps/$w:0.1.0@${digest:0:19}… → manifests/local/$w.workload.yaml"
   done
   abort_if_failed
 else
-  step "7. build skipped (--no-build): applying committed manifests/"
+  step "7. build skipped (--no-build): applying the committed manifests/ (public registry images)"
 fi
-# The manifests to validate and apply: the committed ones, or — with
-# --use-kafka-yaml — copies with bootstrap.servers stripped so the bindings
-# inherit the host default (the committed files keep carrying the broker).
-APPLY_DIR="$MANIFEST_DIR"
+# The manifests to validate and apply: the local build's, or the committed
+# ones with --no-build; with --use-kafka-yaml, copies with bootstrap.servers
+# stripped so the bindings inherit the host default (the committed files keep
+# carrying the broker).
+if $NO_BUILD; then APPLY_DIR="$MANIFEST_DIR"; else APPLY_DIR="$LOCAL_MANIFEST_DIR"; fi
 if $USE_KAFKA_YAML; then
-  APPLY_DIR="$(mktemp -d)"
+  SRC_DIR="$APPLY_DIR"; APPLY_DIR="$(mktemp -d)"
   for w in "${WORKLOAD_LIST[@]}"; do
-    sed '/^ *bootstrap.servers: 127.0.0.1:9092$/d' "$MANIFEST_DIR/$w.workload.yaml" > "$APPLY_DIR/$w.workload.yaml"
+    sed '/^ *bootstrap.servers: 127.0.0.1:9092$/d' "$SRC_DIR/$w.workload.yaml" > "$APPLY_DIR/$w.workload.yaml"
   done
   info "bootstrap.servers stripped from the manifests (in $APPLY_DIR): the bindings inherit kafka.yaml's default"
 fi
@@ -229,7 +231,7 @@ fi
 step "8. validate manifests (POST /v1/workloads/validate)"
 for w in "${WORKLOAD_LIST[@]}"; do
   f="$APPLY_DIR/$w.workload.yaml"
-  [ -f "$f" ] || { fail "$w: no manifest at $f (run without --no-build once)"; failures=$((failures + 1)); continue; }
+  [ -f "$f" ] || { fail "$w: no manifest at $f"; failures=$((failures + 1)); continue; }
   out="$(cosmo_validate "$f")"
   if [ "$(api_status)" = "200" ] && printf '%s' "$out" | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get("valid") else 1)'; then
     pass "$w: valid"

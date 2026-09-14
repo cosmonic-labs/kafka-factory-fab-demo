@@ -15,7 +15,7 @@ set -uo pipefail
 
 verb="${1:-}"; shift || true
 
-pinned_image() { grep -oE 'image: oci.localhost:8200/apps/[^ ]+' "$MANIFEST_DIR/$1.workload.yaml" | head -n1 | cut -d' ' -f2; }
+pinned_image() { grep -oE 'image: [^ ]+' "$(manifest_for "$1")" | head -n1 | cut -d' ' -f2; }
 
 case "$verb" in
   refuse)
@@ -46,7 +46,7 @@ for w in d.get("warnings") or []: print("  warning:", w)'
     cosmo_delete fab-st07-refused-grant >/dev/null; info "fab-st07-refused-grant deleted"
     ;;
   naive|robust)
-    m="$MANIFEST_DIR/fab-st02-die-attach$([ "$verb" = naive ] && echo -naive).workload.yaml"
+    m="$(manifest_for "fab-st02-die-attach$([ "$verb" = naive ] && echo -naive)")"
     [ -f "$m" ] || die "no $m — run scripts/run.sh --naive once to build and push the naive image"
     step "beat 4: swapping fab-st02-die-attach → $(pinned_image "fab-st02-die-attach$([ "$verb" = naive ] && echo -naive)")"
     cosmo_apply "$m" >/dev/null; info "applied [$(api_status)]"
@@ -105,9 +105,10 @@ for w in d.get("warnings") or []: print("  warning:", w)'
   rollout-st03)
     pct="${1:-12}"
     step "beat 7: rolling update of ST-03 with NSOP_THRESHOLD_PCT=$pct (same consumer.group.id, resumes where it stopped)"
-    sed -E "s/NSOP_THRESHOLD_PCT: \"[0-9.]+\"/NSOP_THRESHOLD_PCT: \"$pct\"/" "$MANIFEST_DIR/fab-st03-wire-bond.workload.yaml" > "$MANIFEST_DIR/fab-st03-wire-bond.rollout.yaml"
-    cosmo_apply "$MANIFEST_DIR/fab-st03-wire-bond.rollout.yaml" >/dev/null; info "applied [$(api_status)]"
-    rm -f "$MANIFEST_DIR/fab-st03-wire-bond.rollout.yaml"
+    rollout="$(mktemp)"
+    sed -E "s/NSOP_THRESHOLD_PCT: \"[0-9.]+\"/NSOP_THRESHOLD_PCT: \"$pct\"/" "$(manifest_for fab-st03-wire-bond)" > "$rollout"
+    cosmo_apply "$rollout" >/dev/null; info "applied [$(api_status)]"
+    rm -f "$rollout"
     for _ in $(seq 1 20); do [ "$(workload_state fab-st03-wire-bond)" = running ] && break; sleep 2; done
     pass "fab-st03-wire-bond $(workload_state fab-st03-wire-bond) with NSOP threshold $pct% — the dashboard's ST-03 'started' fault row shows the new value; the heat strip never blanks"
     ;;

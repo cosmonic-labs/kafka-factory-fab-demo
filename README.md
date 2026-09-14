@@ -51,7 +51,9 @@ dashboard URL and the demo beats. Every step prints PASS/FAIL with the
 sentence the failing tool gave. It is idempotent; rerun it any time.
 
 Flags (`make up RUN_FLAGS="…"`): `--no-build` applies the committed
-`manifests/` (no Rust toolchain needed), `--naive` swaps ST-02 for the build
+`manifests/`, which pin the prebuilt images on
+`ghcr.io/cosmonic-labs/kafka-factory-fab-demo/fab-*` (no Rust toolchain
+needed — the fastest way to run the demo), `--naive` swaps ST-02 for the build
 that panics on the poison record, `--no-sim` leaves the loop stopped,
 `--use-kafka-yaml` puts the broker in Desktop's `kafka.yaml` default instead
 of the manifests (needs a daemon restart), `--purge` starts from an empty
@@ -100,7 +102,7 @@ broker (volume kept); `make purge` removes the volume too.
 workloads/          one scaffold per workload (cosmonic new rust-kafka-<pattern>), src/lib.rs rewritten
   factory-simulator/data/<scenario>/<topic>.jsonl   the static record sets (generate.py regenerates them)
   line-dashboard/ui/index.html                      the page: docs/design.html §6, live
-manifests/          digest-pinned Workload per station (what --no-build applies); kafka.yaml.example; refused/
+manifests/          digest-pinned Workload per station on ghcr.io (what --no-build applies); local/ holds a local build's (gitignored); kafka.yaml.example; refused/
 scripts/            run.sh, down.sh, topics.sh, sim.sh, validate.sh, beats.sh, lib.sh
 compose/            single-node Redpanda on 127.0.0.1:9092
 docs/               design.html, icons.svg, DECISIONS.md, LEARNINGS.md
@@ -115,6 +117,10 @@ docs/               design.html, icons.svg, DECISIONS.md, LEARNINGS.md
 - The transactional world's named import needs `wasm-component-ld >= 0.5.27`;
   rustc prefers its own bundled (older) copy, so `st06-final-test/.cargo/`
   carries a linker shim. `make up` checks the versions.
+- `make release` (scripts/release.sh) pushes every built component to
+  `ghcr.io/cosmonic-labs/kafka-factory-fab-demo/<name>:0.1.0`, attaches the
+  packages to this repository, and re-pins `manifests/` to the new digests.
+  A package's visibility is a GitHub UI setting (there is no API for it).
 - CI builds every workload and tests the topic contract against a Redpanda
   service container. No job runs Cosmonic Desktop: there is no headless
   daemon in CI today.
